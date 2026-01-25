@@ -13,5 +13,6 @@ tsconfig.json
 .eslintrc.json
 images/**
 snippets/
+push.ps1
 !snippets/*.json
 !images/icon_min.png

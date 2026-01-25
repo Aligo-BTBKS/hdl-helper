@@ -8,7 +8,7 @@ if ([string]::IsNullOrWhiteSpace($status)) {
 }
 
 # --- 2. 获取输入 (支持默认值) ---
-$inputMsg = Read-Host "solved some problems about release"
+$inputMsg = Read-Host "请输入 commit 信息 (直接回车将使用默认时间戳)"
 
 if ([string]::IsNullOrWhiteSpace($inputMsg)) {
     # 如果用户没输入，生成一个默认信息
