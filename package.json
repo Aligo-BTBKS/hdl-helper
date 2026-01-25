@@ -1,0 +1,182 @@
+{
+  "name": "hdl-helper",
+  "displayName": "HDL Helper",
+  "description": "FPGA/IC 全能助手：双引擎语法检查 (Vivado/Verible)、一键格式化、自动 Testbench、智能例化、LSP 跳转与大纲。",
+  "version": "1.0.0",
+  "publisher": "Cyrus", 
+  "engines": {
+    "vscode": "^1.108.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters",
+    "Formatters",
+    "Snippets"
+  ],
+  "icon": "images/icon_min.png",
+  "main": "./out/extension.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Aligo-BTBKS/hdl-helper"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "hdl-helper.instantiate",
+        "title": "HDL: Instantiate Module"
+      },
+      {
+        "command": "hdl-helper.createSignals",
+        "title": "HDL: Create Signal Declarations"
+      },
+      {
+        "command": "hdl-helper.generateTB",
+        "title": "HDL: Generate Testbench"
+      }
+    ],
+    "configuration": {
+      "title": "HDL Helper",
+      "properties": {
+        "hdl-helper.signalType": {
+          "type": "string",
+          "enum": [
+            "wire",
+            "logic",
+            "reg"
+          ],
+          "default": "logic",
+          "description": "自动声明信号时使用的类型 (Auto-declare signal type)"
+        },
+        "hdl-helper.linter.tool": {
+          "type": "string",
+          "enum": [
+            "xvlog",
+            "verible-lint"
+          ],
+          "default": "xvlog",
+          "description": "选择语法检查工具 (Select Linter Tool): 'xvlog' (Vivado) or 'verible-lint' (Google Verible)."
+        },
+        "hdl-helper.linter.veriblePath": {
+          "type": "string",
+          "default": "verible-verilog-lint",
+          "description": "Path to verible-verilog-lint executable."
+        },
+        "hdl-helper.linter.executablePath": {
+          "type": "string",
+          "default": "xvlog",
+          "description": "Linter 可执行文件路径 (例如: D:\\Xilinx\\Vivado\\2022.1\\bin\\xvlog.bat)。如果已在 PATH 中，保留默认值 'xvlog' 即可。",
+          "scope": "resource"
+        },
+        "hdl-helper.formatter.executablePath": {
+          "type": "string",
+          "default": "verible-verilog-format",
+          "description": "Verible 格式化工具的路径 (Path to verible-verilog-format executable).",
+          "scope": "resource"
+        },
+        "hdl-helper.languageServer.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Verible Language Server (LSP)."
+        },
+        "hdl-helper.languageServer.path": {
+          "type": "string",
+          "default": "verible-verilog-ls",
+          "description": "Path to verible-verilog-ls executable."
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "hdl-helper.instantiate",
+        "key": "ctrl+alt+i",
+        "mac": "cmd+alt+i",
+        "when": "editorTextFocus && (resourceLangId == verilog || resourceLangId == systemverilog)"
+      },
+      {
+        "command": "hdl-helper.createSignals",
+        "key": "ctrl+alt+w",
+        "mac": "cmd+alt+w",
+        "when": "editorTextFocus && (resourceLangId == verilog || resourceLangId == systemverilog)"
+      },
+      {
+        "command": "hdl-helper.generateTB",
+        "key": "ctrl+alt+t",
+        "mac": "cmd+alt+t",
+        "when": "editorTextFocus && (resourceLangId == verilog || resourceLangId == systemverilog)"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "hdl-helper.instantiate",
+          "group": "hdl-group@1",
+          "when": "editorTextFocus && (resourceLangId == verilog || resourceLangId == systemverilog)"
+        },
+        {
+          "command": "hdl-helper.createSignals",
+          "group": "hdl-group@2",
+          "when": "editorTextFocus && (resourceLangId == verilog || resourceLangId == systemverilog)"
+        },
+        {
+          "command": "hdl-helper.generateTB",
+          "group": "hdl-group@3",
+          "when": "editorTextFocus && (resourceLangId == verilog || resourceLangId == systemverilog)"
+        }
+      ]
+    },
+    "snippets": [
+      {
+        "language": "verilog",
+        "path": "./snippets/hdl.json"
+      },
+      {
+        "language": "systemverilog",
+        "path": "./snippets/hdl.json"
+      }
+    ],
+    "languages": [
+      {
+        "id": "verilog",
+        "aliases": ["Verilog", "v"],
+        "extensions": [".v", ".vh", ".vl"],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "systemverilog",
+        "aliases": ["SystemVerilog", "sv"],
+        "extensions": [".sv", ".svh", ".sva"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "verilog",
+        "scopeName": "source.verilog",
+        "path": "./syntaxes/verilog.tmLanguage.json"
+      },
+      {
+        "language": "systemverilog",
+        "scopeName": "source.systemverilog",
+        "path": "./syntaxes/systemverilog.tmLanguage.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.108.1",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "typescript-eslint": "^8.52.0",
+    "eslint": "^9.39.2",
+    "typescript": "^5.9.3",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2"
+  }
+}

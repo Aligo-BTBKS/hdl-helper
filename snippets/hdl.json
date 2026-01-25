@@ -1,0 +1,591 @@
+{
+    "File Header": {
+        "prefix": "header",
+        "body": [
+            "// -----------------------------------------------------------------------------",
+            "// Copyright (c) ${CURRENT_YEAR} ${1:YourCompany}. All rights reserved.",
+            "// -----------------------------------------------------------------------------",
+            "// File Name   : ${TM_FILENAME}",
+            "// Author      : ${2:YourName}",
+            "// Date        : ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
+            "// Description : ${3:Module Description}",
+            "// -----------------------------------------------------------------------------"
+        ],
+        "description": "Standard File Header"
+    },
+    "Module (Modern)": {
+        "prefix": "module",
+        "body": [
+            "module ${1:module_name} #(",
+            "\tparameter int ${2:DATA_WIDTH} = 32",
+            ") (",
+            "\tinput  logic                      clk,",
+            "\tinput  logic                      rst_n,",
+            "\tinput  logic [${2:DATA_WIDTH}-1:0] din,",
+            "\toutput logic [${2:DATA_WIDTH}-1:0] dout",
+            ");",
+            "",
+            "\t$0",
+            "",
+            "endmodule : ${1:module_name}"
+        ],
+        "description": "SystemVerilog Module with Parameters"
+    },
+    "Module (Simple)": {
+        "prefix": "module_simple",
+        "body": [
+            "module ${1:moduleName} (",
+            "\tinput  ${2:clk},",
+            "\tinput  ${3:rst_n},",
+            "\toutput ${4:out}",
+            ");",
+            "\t$0",
+            "endmodule"
+        ],
+        "description": "Simple Verilog Module"
+    },
+    "Module Instantiation": {
+        "prefix": ["inst", "instance"],
+        "body": [
+            "${1:module_type} #(",
+            "\t.${2:PARAM}(${3:val})",
+            ") ${4:u_instance} (",
+            "\t.${5:port}(${6:sig})",
+            ");"
+        ],
+        "description": "Module Instantiation Template"
+    },
+    "Package": {
+        "prefix": "package",
+        "body": [
+            "package ${1:pkg_name};",
+            "",
+            "\t$0",
+            "",
+            "endpackage : ${1:pkg_name}"
+        ],
+        "description": "SystemVerilog Package"
+    },
+    "Interface": {
+        "prefix": "interface",
+        "body": [
+            "interface ${1:intf_name} (input logic clk, input logic rst_n);",
+            "\tlogic [${2:31}:0] ${3:data};",
+            "\tlogic        ${4:valid};",
+            "",
+            "\tmodport master (output ${3:data}, ${4:valid});",
+            "\tmodport slave  (input  ${3:data}, ${4:valid});",
+            "",
+            "endinterface : ${1:intf_name}"
+        ],
+        "description": "Interface Definition"
+    },
+    "Always FF (Sequential)": {
+        "prefix": "always_ff",
+        "body": [
+            "always_ff @(posedge ${1:clk} or negedge ${2:rst_n}) begin : ${3:blk_name}",
+            "\tif (!${2:rst_n}) begin",
+            "\t\t${4:q} <= '0;",
+            "\tend else begin",
+            "\t\t${4:q} <= ${5:d};",
+            "\tend",
+            "end"
+        ],
+        "description": "Sequential Logic (DFF with Async Reset)"
+    },
+    "Always Comb (Combinational)": {
+        "prefix": "always_comb",
+        "body": [
+            "always_comb begin : ${1:blk_name}",
+            "\t$0",
+            "end"
+        ],
+        "description": "Combinational Logic Block"
+    },
+    "Always Latch": {
+        "prefix": "always_latch",
+        "body": [
+            "always_latch begin : ${1:blk_name}",
+            "\tif (${2:enable}) begin",
+            "\t\t${3:q} <= ${4:d};",
+            "\tend",
+            "end"
+        ],
+        "description": "Latch Logic Block"
+    },
+    "Always (Generic)": {
+        "prefix": "always",
+        "body": [
+            "always @(${1:*}) begin",
+            "\t$0",
+            "end"
+        ],
+        "description": "Standard Verilog Always Block"
+    },
+    "Always Posedge": {
+        "prefix": "always_pos",
+        "body": [
+            "always @(posedge ${1:clk}) begin",
+            "\t$0",
+            "end"
+        ],
+        "description": "Always Posedge Block"
+    },
+    "Initial Block": {
+        "prefix": "initial",
+        "body": [
+            "initial begin",
+            "\t$0",
+            "end"
+        ],
+        "description": "Initial Block"
+    },
+    "Begin Block": {
+        "prefix": "begin",
+        "body": [
+            "begin",
+            "\t$0",
+            "end"
+        ],
+        "description": "Begin Block"
+    },
+    "Generate Loop": {
+        "prefix": "generate",
+        "body": [
+            "generate",
+            "\tfor (genvar i = 0; i < ${1:N}; i++) begin : ${2:gen_blk}",
+            "\t\t$0",
+            "\tend",
+            "endgenerate"
+        ],
+        "description": "Generate For Loop"
+    },
+    "Finite State Machine (FSM)": {
+        "prefix": "fsm",
+        "body": [
+            "// --- FSM Definition ---",
+            "typedef enum logic [${1:1}:0] {",
+            "\t${2:IDLE},",
+            "\t${3:ACTIVE}",
+            "} state_t;",
+            "state_t current_state, next_state;",
+            "",
+            "// 1. State Register",
+            "always_ff @(posedge clk or negedge rst_n) begin",
+            "\tif (!rst_n) current_state <= ${2:IDLE};",
+            "\telse        current_state <= next_state;",
+            "end",
+            "",
+            "// 2. Next State Logic",
+            "always_comb begin",
+            "\tnext_state = current_state;",
+            "\tcase (current_state)",
+            "\t\t${2:IDLE}: begin",
+            "\t\t\tif (${4:start}) next_state = ${3:ACTIVE};",
+            "\t\tend",
+            "\t\t${3:ACTIVE}: begin",
+            "\t\t\t$0",
+            "\t\tend",
+            "\t\tdefault: next_state = ${2:IDLE};",
+            "\tendcase",
+            "end"
+        ],
+        "description": "Standard 3-Segment FSM"
+    },
+    "If Statement": {
+        "prefix": "if",
+        "body": [
+            "if (${1:condition}) begin",
+            "\t$0",
+            "end"
+        ],
+        "description": "if block"
+    },
+    "If Else": {
+        "prefix": "ifelse",
+        "body": [
+            "if (${1:condition}) begin",
+            "\t$2",
+            "end else begin",
+            "\t$3",
+            "end"
+        ],
+        "description": "if-else block"
+    },
+    "Case": {
+        "prefix": "case",
+        "body": [
+            "case (${1:sel})",
+            "\t${2:VAL_A}: $3;",
+            "\tdefault: $4;",
+            "endcase"
+        ],
+        "description": "case statement"
+    },
+    "Unique Case (FSM)": {
+        "prefix": "case_unique",
+        "body": [
+            "unique case (${1:current_state})",
+            "\t${2:IDLE}: begin",
+            "\t\t$0",
+            "\tend",
+            "\tdefault: next_state = ${2:IDLE};",
+            "endcase"
+        ],
+        "description": "Safe FSM Case with unique keyword"
+    },
+    "For Loop": {
+        "prefix": "for",
+        "body": [
+            "for (int i = 0; i < ${1:limit}; i++) begin",
+            "\t$0",
+            "end"
+        ],
+        "description": "For loop"
+    },
+    "While Loop": {
+        "prefix": "while",
+        "body": [
+            "while (${1:condition}) begin",
+            "\t$0",
+            "end"
+        ]
+    },
+    "Logic": {
+        "prefix": "logic",
+        "body": "logic [${1:WIDTH}-1:0] ${2:name};"
+    },
+    "Wire": {
+        "prefix": "wire",
+        "body": "wire [${1:WIDTH}-1:0] ${2:name};"
+    },
+    "Reg": {
+        "prefix": "reg",
+        "body": "reg [${1:WIDTH}-1:0] ${2:name};"
+    },
+    "Bit": {
+        "prefix": "bit",
+        "body": "bit ${1:name};"
+    },
+    "Int": {
+        "prefix": "int",
+        "body": "int ${1:name};"
+    },
+    "Byte (Fixed)": {
+        "prefix": "byte",
+        "body": "byte ${1:byte_name} = ${2:8'h00};"
+    },
+    "Parameter": {
+        "prefix": "parameter",
+        "body": "parameter ${1:PARAM_NAME} = ${2:value};"
+    },
+    "Localparam": {
+        "prefix": "localparam",
+        "body": "localparam ${1:PARAM_NAME} = ${2:value};"
+    },
+    "Typedef Enum": {
+        "prefix": "typedef enum",
+        "body": [
+            "typedef enum logic [${1:width}-1:0] {",
+            "\t${2:STATE_A} = ${3:0},",
+            "\t${4:STATE_B} = ${5:1}",
+            "} ${6:enum_name_t};"
+        ]
+    },
+    "Typedef Struct Packed": {
+        "prefix": "struct packed",
+        "body": [
+            "typedef struct packed {",
+            "\tlogic [${1:7}:0] ${2:field1};",
+            "\tlogic        ${3:field2};",
+            "} ${4:struct_name_t};"
+        ]
+    },
+    "Queue": {
+        "prefix": "queue",
+        "body": "${1:type} ${2:name}[$];"
+    },
+    "Dynamic Array": {
+        "prefix": "darray",
+        "body": "${1:type} ${2:name}[];"
+    },
+    "Associative Array": {
+        "prefix": "assoc",
+        "body": "${1:val_type} ${2:name}[${3:key_type}];"
+    },
+    "Include": {
+        "prefix": "include",
+        "body": "`include \"${1:file.v}\""
+    },
+    "Define": {
+        "prefix": "define",
+        "body": "`define ${1:MACRO} ${2:value}"
+    },
+    "Ifdef": {
+        "prefix": "ifdef",
+        "body": [
+            "`ifdef ${1:MACRO}",
+            "\t$0",
+            "`endif"
+        ]
+    },
+    "Ifndef": {
+        "prefix": "ifndef",
+        "body": [
+            "`ifndef ${1:MACRO}",
+            "\t$0",
+            "`endif"
+        ]
+    },
+    "Timescale": {
+        "prefix": "timescale",
+        "body": "`timescale ${1:1ns}/${2:1ps}"
+    },
+    "Default Nettype": {
+        "prefix": "default_nettype",
+        "body": "`default_nettype ${1:none}"
+    },
+    "Class": {
+        "prefix": "class",
+        "body": [
+            "class ${1:ClassName};",
+            "\tfunction new();",
+            "\t\t$0",
+            "\tendfunction",
+            "endclass : ${1:ClassName}"
+        ],
+        "description": "Generic Class"
+    },
+    "Class Extends": {
+        "prefix": "class extends",
+        "body": [
+            "class ${1:ClassName} extends ${2:SuperClass};",
+            "\tfunction new();",
+            "\t\tsuper.new();",
+            "\t\t$0",
+            "\tendfunction",
+            "endclass : ${1:ClassName}"
+        ],
+        "description": "Inherited Class"
+    },
+    "Task": {
+        "prefix": "task",
+        "body": [
+            "task ${1:task_name}(${2:args});",
+            "\t$0",
+            "endtask"
+        ]
+    },
+    "Function": {
+        "prefix": "function",
+        "body": [
+            "function ${1:void} ${2:func_name}(${3:args});",
+            "\t$0",
+            "endfunction"
+        ]
+    },
+    "Function CLOG2": {
+        "prefix": "func_clog2",
+        "body": [
+            "function integer clog2;",
+            "\tinput integer value;",
+            "\tbegin",
+            "\t\tvalue = value - 1;",
+            "\t\tfor (clog2 = 0; value > 0; clog2 = clog2 + 1)",
+            "\t\t\tvalue = value >> 1;",
+            "\tend",
+            "endfunction"
+        ],
+        "description": "Ceiling Log2 Function for Parameters"
+    },
+    "SVA AXI Stability": {
+        "prefix": "sva_axi_stable",
+        "body": [
+            "// SVA: Data must be stable when Valid is high and Ready is low",
+            "property p_${1:bus}_stability;",
+            "\t@(posedge clk) disable iff (!rst_n)",
+            "\t(${2:valid} && !${3:ready}) |-> \\$stable(${4:data});",
+            "endproperty",
+            "",
+            "assert_${1:bus}_stability: assert property(p_${1:bus}_stability)",
+            "\telse `uvm_error(\"AXI_RULE\", \"${1:bus} Violation: Data changed during backpressure\");"
+        ],
+        "description": "AXI/Stream Stability Assertion"
+    },
+    "SVA Rose Check": {
+        "prefix": "sva_rose",
+        "body": [
+            "assert property (@(posedge clk) disable iff (!rst_n) \\$rose(${1:sig}) |-> ${2:consequence});"
+        ],
+        "description": "Assertion for Signal Rising Edge"
+    },
+    "UVM Component": {
+        "prefix": "uvm_comp",
+        "body": [
+            "class ${1:my_comp} extends ${2:uvm_component};",
+            "\t`uvm_component_utils(${1:my_comp})",
+            "",
+            "\tfunction new(string name, uvm_component parent);",
+            "\t\tsuper.new(name, parent);",
+            "\tendfunction",
+            "",
+            "\tvirtual function void build_phase(uvm_phase phase);",
+            "\t\tsuper.build_phase(phase);",
+            "\t\t$0",
+            "\tendfunction",
+            "endclass : ${1:my_comp}"
+        ]
+    },
+    "UVM Object": {
+        "prefix": "uvm_obj",
+        "body": [
+            "class ${1:my_obj} extends ${2:uvm_object};",
+            "\t`uvm_object_utils(${1:my_obj})",
+            "",
+            "\tfunction new(string name = \"${1:my_obj}\");",
+            "\t\tsuper.new(name);",
+            "\tendfunction",
+            "endclass : ${1:my_obj}"
+        ]
+    },
+    "UVM Objection": {
+        "prefix": "uvm_objection",
+        "body": [
+            "phase.raise_objection(this);",
+            "$0",
+            "phase.drop_objection(this);"
+        ],
+        "description": "Raise and Drop Objections"
+    },
+    "UVM Analysis Port": {
+        "prefix": "uvm_ap",
+        "body": [
+            "uvm_analysis_port #(${1:type_t}) ${2:ap_name};",
+            "// In build_phase:",
+            "${2:ap_name} = new(\"${2:ap_name}\", this);"
+        ],
+        "description": "UVM Analysis Port Definition"
+    },
+    "UVM Info": {
+        "prefix": "uinfo",
+        "body": "`uvm_info(\"${1:ID}\", \\$sformatf(\"${2:Msg: %d}\", ${3:val}), UVM_LOW)"
+    },
+    "UVM Error": {
+        "prefix": "uerror",
+        "body": "`uvm_error(\"${1:ID}\", \\$sformatf(\"${2:Error: %s}\", ${3:msg}))"
+    },
+    "UVM Fatal": {
+        "prefix": "ufatal",
+        "body": "`uvm_fatal(\"${1:ID}\", \"${2:Fatal Error!}\")"
+    },
+    "Assert Property": {
+        "prefix": "assert property",
+        "body": [
+            "property ${1:p_name};",
+            "\t@(posedge clk) disable iff (!rst_n)",
+            "\t\t${2:req} |-> ##${3:1} ${4:ack};",
+            "endproperty",
+            "",
+            "assert_${1:p_name}: assert property(${1:p_name})",
+            "\telse `uvm_error(\"SVA\", \"Assertion ${1:p_name} Failed\");"
+        ]
+    },
+    "Display": {
+        "prefix": "display",
+        "body": "\\$display(\"${1:Time: %0t} ${2:Msg}\", \\$time, ${3:args});"
+    },
+    "Testbench Template": {
+        "prefix": "tb_template",
+        "body": [
+            "`timescale 1ns/1ps",
+            "",
+            "module tb_${1:module_name};",
+            "",
+            "\t// -------------------------------------------------------------------------",
+            "\t// 1. Parameters & Constants",
+            "\t// -------------------------------------------------------------------------",
+            "\tlocalparam CLK_PERIOD = 10.0; // Float for precision",
+            "\tlocalparam TIMEOUT    = 50000; // Cycles watchdog",
+            "",
+            "\t// -------------------------------------------------------------------------",
+            "\t// 2. Signals & Interface",
+            "\t// -------------------------------------------------------------------------",
+            "\tlogic clk;",
+            "\tlogic rst_n;",
+            "",
+            "\t// DUT Signals",
+            "\t// logic [31:0] ...",
+            "",
+            "\t// -------------------------------------------------------------------------",
+            "\t// 3. DUT Instantiation",
+            "\t// -------------------------------------------------------------------------",
+            "\t${1:module_name} #(",
+            "\t\t// .PARAM (VAL)",
+            "\t) u_dut (",
+            "\t\t.clk   (clk),",
+            "\t\t.rst_n (rst_n)",
+            "\t\t// Connect other ports",
+            "\t\t$0",
+            "\t);",
+            "",
+            "\t// -------------------------------------------------------------------------",
+            "\t// 4. Clock & Reset Generation",
+            "\t// -------------------------------------------------------------------------",
+            "\tinitial begin",
+            "\t\tclk = 0;",
+            "\t\tforever #(CLK_PERIOD/2.0) clk = ~clk;",
+            "\tend",
+            "",
+            "\t// Task: Standard Reset Sequence (Async assert, Sync deassert)",
+            "\ttask apply_reset();",
+            "\tbegin",
+            "\t\t\\$display(\"[%0t] Reset Asserted...\", \\$time);",
+            "\t\trst_n = 0;",
+            "\t\trepeat(10) @(posedge clk);",
+            "\t\t@(negedge clk); // Release on negedge to avoid hold violations",
+            "\t\trst_n = 1;",
+            "\t\t\\$display(\"[%0t] Reset Released...\", \\$time);",
+            "\tend",
+            "\tendtask",
+            "",
+            "\t// -------------------------------------------------------------------------",
+            "\t// 5. Main Test Process",
+            "\t// -------------------------------------------------------------------------",
+            "\tinitial begin",
+            "\t\t// 5.1 Waveform Dump",
+            "\t\t`ifdef DUMP_VCD",
+            "\t\t\t\\$dumpfile(\"tb_${1:module_name}.vcd\");",
+            "\t\t\t\\$dumpvars(0, tb_${1:module_name});",
+            "\t\t`endif",
+            "\t\t`ifdef DUMP_FSDB",
+            "\t\t\t\\$fsdbDumpfile(\"tb_${1:module_name}.fsdb\");",
+            "\t\t\t\\$fsdbDumpvars(0, tb_${1:module_name});",
+            "\t\t`endif",
+            "",
+            "\t\t// 5.2 Test Sequence",
+            "\t\tapply_reset();",
+            "",
+            "\t\t\\$display(\"[%0t] Test Started...\", \\$time);",
+            "\t\t// TODO: Driver Logic Here",
+            "\t\trepeat(100) @(posedge clk); // Placeholder",
+            "",
+            "\t\t// 5.3 End of Simulation",
+            "\t\t\\$display(\"[%0t] TEST PASSED\", \\$time);",
+            "\t\t\\$finish;",
+            "\tend",
+            "",
+            "\t// -------------------------------------------------------------------------",
+            "\t// 6. Watchdog (Safety Net)",
+            "\t// -------------------------------------------------------------------------",
+            "\tinitial begin",
+            "\t\trepeat(TIMEOUT) @(posedge clk);",
+            "\t\t\\$display(\"\\nError: Simulation Timeout after %0d cycles!\", TIMEOUT);",
+            "\t\t\\$display(\"[%0t] TEST FAILED (TIMEOUT)\", \\$time);",
+            "\t\t\\$fatal;",
+            "\tend",
+            "",
+            "endmodule"
+        ],
+        "description": "Professional SV Testbench with Watchdog & Safe Reset"
+    }
+}
