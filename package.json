@@ -2,8 +2,8 @@
   "name": "hdl-helper",
   "displayName": "HDL Helper",
   "description": "FPGA/IC 全能助手：双引擎语法检查 (Vivado/Verible)、一键格式化、自动 Testbench、智能例化、LSP 跳转与大纲。",
-  "version": "1.0.1",
-  "publisher": "Cyrus", 
+  "version": "1.0.2",
+  "publisher": "Cyrus",
   "engines": {
     "vscode": "^1.108.0"
   },
@@ -82,6 +82,18 @@
           "type": "string",
           "default": "verible-verilog-ls",
           "description": "Path to verible-verilog-ls executable."
+        },
+        "hdl-helper.formatter.flags": {
+          "type": "array",
+          "default": [
+            "--assignment_statement_alignment=preserve",
+            "--case_items_alignment=infer",
+            "--class_member_variable_alignment=infer"
+          ],
+          "markdownDescription": "Verible 格式化的高级参数列表。常用参数参考：\n\n* **对齐方式**: `align` (强制对齐), `preserve` (保持原样), `infer` (自动推断), `flush-left` (左对齐)\n* `--assignment_statement_alignment`: 赋值语句对齐 (=)\n* `--named_port_alignment`: 实例化端口对齐 (.port)\n* `--port_declarations_alignment`: 模块端口定义对齐 (input/output)\n* `--module_net_variable_alignment`: 内部信号声明对齐 (wire/reg)\n* `--column_limit=120`: 最大行宽\n* `--indentation_spaces=2`: 强制缩进空格数 (默认跟随 VS Code 设置)",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -137,14 +149,28 @@
     "languages": [
       {
         "id": "verilog",
-        "aliases": ["Verilog", "v"],
-        "extensions": [".v", ".vh", ".vl"],
+        "aliases": [
+          "Verilog",
+          "v"
+        ],
+        "extensions": [
+          ".v",
+          ".vh",
+          ".vl"
+        ],
         "configuration": "./language-configuration.json"
       },
       {
         "id": "systemverilog",
-        "aliases": ["SystemVerilog", "sv"],
-        "extensions": [".sv", ".svh", ".sva"],
+        "aliases": [
+          "SystemVerilog",
+          "sv"
+        ],
+        "extensions": [
+          ".sv",
+          ".svh",
+          ".sva"
+        ],
         "configuration": "./language-configuration.json"
       }
     ],
@@ -169,14 +195,18 @@
     "lint": "eslint src",
     "test": "vscode-test"
   },
+  "dependencies": {
+    "vscode-jsonrpc": "^8.2.0",
+    "vscode-languageclient": "^9.0.1"
+  },
   "devDependencies": {
-    "@types/vscode": "^1.108.1",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
-    "typescript-eslint": "^8.52.0",
+    "@types/vscode": "^1.108.1",
+    "@vscode/test-cli": "^0.0.11",
+    "@vscode/test-electron": "^2.5.2",
     "eslint": "^9.39.2",
     "typescript": "^5.9.3",
-    "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2"
+    "typescript-eslint": "^8.52.0"
   }
 }

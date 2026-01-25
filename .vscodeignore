@@ -7,7 +7,6 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 .git/**
-node_modules/**
 out/test/**
 test/**
 tsconfig.json
