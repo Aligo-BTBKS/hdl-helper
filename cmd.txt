@@ -1,0 +1,3 @@
+package cmd : vsce package
+compile cmd : npm run compile
+code --install-extension /path/to/your-extension.vsix

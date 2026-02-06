@@ -29,8 +29,8 @@
         ],
         "description": "SystemVerilog Module with Parameters"
     },
-    "Module (Simple)": {
-        "prefix": "module_simple",
+    "Module (No parameter)": {
+        "prefix": "module",
         "body": [
             "module ${1:moduleName} (",
             "    input  ${2:clk},",
@@ -39,7 +39,7 @@
             "    $0",
             "endmodule"
         ],
-        "description": "Simple Verilog Module"
+        "description": "Verilog Module With No Params"
     },
     "Module Instantiation": {
         "prefix": ["inst", "instance"],
@@ -80,7 +80,8 @@
             "always_ff @(posedge ${1:clk} or negedge ${2:rst_n}) begin : ${3:blk_name}",
             "    if (!${2:rst_n}) begin",
             "        $0",
-            "    end else begin",
+            "    end",
+            "    else begin",
             "        $0",
             "    end",
             "end"
@@ -200,7 +201,8 @@
         "body": [
             "if (${1:condition}) begin",
             "    $2",
-            "end else begin",
+            "end",
+            "else begin",
             "    $3",
             "end"
         ],
@@ -294,7 +296,7 @@
         ]
     },
     "Typedef Struct Packed": {
-        "prefix": "struct packed",
+        "prefix": "typedef struct packed",
         "body": [
             "typedef struct packed {",
             "    logic [${1:7}:0] ${2:field1};",
