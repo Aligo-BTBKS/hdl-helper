@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { parseModule } from '../utils/hdlUtils';
+import { FastParser } from '../project/fastParser'; // 👈 使用新解析器
+import { CodeGenerator } from '../utils/codeGenerator'; // 👈 使用新生成器
 
 export async function instantiateModule() {
     const editor = vscode.window.activeTextEditor;
@@ -10,55 +11,23 @@ export async function instantiateModule() {
 
     const doc = editor.document;
     const code = doc.getText();
+    const uri = doc.uri;
 
-    // 1. 解析
-    const moduleInfo = parseModule(code);
-    if (!moduleInfo) {
-        vscode.window.showErrorMessage('无法识别模块定义，请检查语法');
+    // 1. 使用 V2.0 的 FastParser 解析当前文本
+    // 即使文件还没保存，FastParser 也能解析内存中的文本
+    const hdlModule = FastParser.parse(code, uri);
+
+    if (!hdlModule) {
+        vscode.window.showErrorMessage('无法识别模块定义，请检查 module 关键字');
         return;
     }
 
-    // 2. 生成例化代码
-    const instCode = generateInstantiation(moduleInfo);
+    // 2. 使用统一生成器 (开启 withComments = true，保留你喜欢的注释风格)
+    const instCode = CodeGenerator.generateInstantiation(hdlModule, true);
 
     // 3. 写入剪贴板
     await vscode.env.clipboard.writeText(instCode);
     
-    // 4. 提示用户
-    vscode.window.showInformationMessage(`已复制 ${moduleInfo.name} 的例化代码到剪贴板！`);
-}
-
-function generateInstantiation(info: any): string {
-    const { name, params, ports } = info;
-    const instanceName = `u_${name}`;
-
-    // 找出最长的端口名长度 (用于对齐)
-    const maxPortLen = Math.max(...ports.map((p: any) => p.name.length));
-
-    // --- 1. 构建参数部分 (保持不变) ---
-    let paramBlock = '';
-    if (params.length > 0) {
-        const maxParamLen = Math.max(...params.map((p: any) => p.name.length));
-        const paramLines = params.map((p: any, i: number) => {
-            const padding = ' '.repeat(maxParamLen - p.name.length);
-            const comma = i === params.length - 1 ? '' : ',';
-            return `    .${p.name}${padding} ( ${p.name}${padding} )${comma}`;
-        }).join('\n');
-        paramBlock = ` #(\n${paramLines}\n)`;
-    }
-
-    // --- 2. 构建端口部分 (升级版：带注释) ---
-    const portLines = ports.map((p: any, i: number) => {
-        const padding = ' '.repeat(maxPortLen - p.name.length);
-        const comma = i === ports.length - 1 ? '' : ','; 
-        
-        // 关键修改：添加注释，记录方向和位宽
-        // 格式: .port ( sig ), // input [31:0]
-        const widthStr = p.width ? ` ${p.width}` : '';
-        const comment = ` // ${p.direction}${widthStr}`;
-        
-        return `    .${p.name}${padding} ( ${p.name}${padding} )${comma}${comment}`;
-    }).join('\n');
-
-    return `${name}${paramBlock} ${instanceName} (\n${portLines}\n);`;
+    // 4. 提示
+    vscode.window.showInformationMessage(`✅ 已复制 ${hdlModule.name} 的例化代码！`);
 }

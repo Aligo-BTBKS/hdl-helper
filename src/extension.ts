@@ -13,10 +13,10 @@ import { HdlTreeProvider } from './project/hdlTreeProvider';
 import { HdlModule } from './project/hdlSymbol';
 import { VerilogDefinitionProvider } from './providers/defProvider';
 import { VerilogHoverProvider } from './providers/hoverProvider';
+import { CodeGenerator } from './utils/codeGenerator'
 
 // 全局变量，方便 deactivate 使用
 let projectManager: ProjectManager;
-
 export function activate(context: vscode.ExtensionContext) {
     console.log('HDL Helper is active!');
 
@@ -83,36 +83,13 @@ export function activate(context: vscode.ExtensionContext) {
     });
     context.subscriptions.push(autoWireCmd);
 
-    // --- D. 复制实例化模板 (基于 V2.0 解析器) ---
+    // D. 复制实例化模板 (树节点右键)
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.copyInstantiation', async (item: HdlModule) => {
         if (!item || !(item instanceof HdlModule)) return;
-        
-        // 1. 处理 Parameters
-        let paramCode = '';
-        if (item.params.length > 0) {
-            const maxLen = Math.max(...item.params.map(p => p.name.length), 0);
-            paramCode += ` #(\n` + item.params.map((p, i) => {
-                const pad = ' '.repeat(maxLen - p.name.length);
-                const end = i === item.params.length - 1 ? '' : ',';
-                return `    .${p.name}${pad} ( ${p.defaultValue} )${end}`;
-            }).join('\n') + `\n)`;
-        }
 
-        // 2. 处理 Ports
-        let portCode = ' (\n';
-        if (item.ports.length > 0) {
-            const maxLen = Math.max(...item.ports.map(p => p.name.length), 0);
-            portCode += item.ports.map((p, i) => {
-                const pad = ' '.repeat(maxLen - p.name.length);
-                const end = i === item.ports.length - 1 ? '' : ',';
-                return `    .${p.name}${pad} ( ${p.name}${pad} )${end}`;
-            }).join('\n');
-        } else {
-             portCode += `    // Ports...`;
-        }
-        portCode += `\n);`;
+        // 调用统一生成器 (这里可以选择不带注释，保持清爽，或者设为 true 也带注释)
+        const finalCode = CodeGenerator.generateInstantiation(item, false);
 
-        const finalCode = `${item.name}${paramCode} u_${item.name}${portCode}`;
         await vscode.env.clipboard.writeText(finalCode);
         vscode.window.showInformationMessage(`已复制 ${item.name} 实例化模板！`);
     }));

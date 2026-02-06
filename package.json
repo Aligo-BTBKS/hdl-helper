@@ -2,7 +2,7 @@
   "name": "hdl-helper",
   "displayName": "HDL Helper",
   "description": "FPGA/IC 全能助手：双引擎语法检查 (Vivado/Verible)、一键格式化、自动 Testbench、智能例化、LSP 跳转与大纲。",
-  "version": "2.0.4",
+  "version": "2.1.0",
   "publisher": "Cyrus",
   "engines": {
     "vscode": "^1.108.0"

@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import * as cp from 'child_process';
 import * as path from 'path';
+import * as fs from 'fs';
 
-export default class VerilogLinter {
+export default class VerilogLinter implements vscode.Disposable {
     private diagnosticCollection: vscode.DiagnosticCollection;
     private outputChannel: vscode.OutputChannel;
     private timer: NodeJS.Timeout | undefined;
@@ -26,6 +27,9 @@ export default class VerilogLinter {
         this.diagnosticCollection.clear();
         this.diagnosticCollection.dispose();
         this.outputChannel.dispose();
+        if (this.timer) {
+            clearTimeout(this.timer);
+        }
     }
 
     private lint(doc: vscode.TextDocument) {
@@ -45,7 +49,8 @@ export default class VerilogLinter {
         const config = vscode.workspace.getConfiguration('hdl-helper');
         const tool = config.get<string>('linter.tool') || 'xvlog';
 
-        this.outputChannel.appendLine(`[Linter] Tool selected: ${tool}`);
+        // 避免日志刷屏，只有改变工具或出错时才重点关注，但为了调试保留这行
+        // this.outputChannel.appendLine(`[Linter] Tool selected: ${tool}`);
 
         if (tool === 'verible-lint') {
             this.lintWithVerible(doc, config);
@@ -55,68 +60,60 @@ export default class VerilogLinter {
     }
 
     // =========================================================
-    // 引擎 A: Vivado (xvlog) - 极简回归版 (依赖绝对路径)
+    // 引擎 A: Vivado (xvlog)
     // =========================================================
     private lintWithVivado(doc: vscode.TextDocument, config: vscode.WorkspaceConfiguration) {
         let binPath = config.get<string>('linter.executablePath') || 'xvlog';
         const isWindows = process.platform === 'win32';
         
-        // 路径检查建议
-        if (isWindows && binPath.includes('\\') && !path.isAbsolute(binPath)) {
-             vscode.window.showWarningMessage(`建议使用 Vivado 的绝对路径，例如: D:\\Xilinx\\Vivado\\...\\xvlog.bat`);
+        // 1. 路径处理与补全
+        if (isWindows) {
+            // 如果不是 .bat 或 .exe 结尾，且不是简单的命令名(xvlog)，尝试追加 .bat
+            if (!binPath.toLowerCase().endsWith('.bat') && !binPath.toLowerCase().endsWith('.exe')) {
+                // 如果是绝对路径，或者看起来像路径
+                if (path.isAbsolute(binPath) || binPath.includes('\\') || binPath.includes('/')) {
+                    binPath += '.bat';
+                }
+            }
         }
 
-        // 1. 构造参数
+        // 2. 构造参数
         const args = ['--nolog'];
         if (doc.languageId === 'systemverilog') {
             args.push('-sv');
         }
-        // 文件名加引号
+        // 文件名必须加引号，防止空格
         args.push(`"${doc.fileName}"`);
 
-        let cmd = '';
-        if (isWindows) {
-            // 补全后缀
-            if (!binPath.endsWith('.bat') && !binPath.endsWith('.exe')) {
-                 binPath += '.bat';
-            }
-            
-            // ⚠️ 终极方案：直接使用 "Path" Args 格式
-            // 既然你已经配了绝对路径，就不需要 cmd /c call 这种复杂的嵌套了
-            // Node.js 的 exec 会自动处理这个执行过程
-            cmd = `"${binPath}" ${args.join(' ')}`;
-        } else {
-            cmd = `"${binPath}" ${args.join(' ')}`;
-        }
+        // 3. 构造命令
+        // 使用引号包裹可执行文件路径，防止 "Program Files" 空格问题
+        const cmd = `"${binPath}" ${args.join(' ')}`;
 
-        this.outputChannel.appendLine(`[Exec] ${cmd}`);
+        this.outputChannel.appendLine(`[Vivado Exec] ${cmd}`);
 
         cp.exec(cmd, { cwd: path.dirname(doc.fileName) }, (error, stdout, stderr) => {
             const output = stdout.toString() + stderr.toString();
             
-            // 错误处理
-            if (output.includes('is not recognized') || (output.length < 200 && error)) {
-                if (output.includes('') || output.includes('not recognized')) {
-                    this.outputChannel.appendLine('[Error] Vivado 启动失败。');
-                    this.outputChannel.appendLine(`[Raw Output] ${output}`);
-                    
-                    // @ts-ignore
-                    if (error && (error.code === 'ENOENT' || error.code === 9009 || error.code === 1)) {
-                        vscode.window.showErrorMessage(
-                            `Linter 启动失败！请检查设置中 Vivado 路径是否为绝对路径。`,
-                            "去设置"
-                        ).then(sel => {
-                            if (sel) vscode.commands.executeCommand('workbench.action.openSettings', 'hdl-helper.linter.executablePath');
-                        });
+            // 错误处理: 检查命令是否未找到
+            if (error) {
+                // 常见的 Windows/Linux "未找到命令" 错误码
+                // Fix: 使用 (error as any).code 解决 TS 报错，因为 ENOENT 是字符串
+                if ((error as any).code === 'ENOENT' || error.code === 127 || output.includes('is not recognized')) {
+                    this.outputChannel.appendLine(`[Error] Vivado executable not found: ${binPath}`);
+                    // 仅当用户明确配置了路径时才频繁弹窗，否则只在输出台显示，避免骚扰
+                    if (path.isAbsolute(binPath)) {
+                        vscode.window.showErrorMessage(`无法找到 Vivado (xvlog)。请检查设置中的路径。`);
                     }
+                    return;
                 }
             }
 
+            // 调试日志
             if (output.trim().length > 0) {
-                // 只要不是找不到脚本的错误，就打印
-                if (!output.includes('setupEnv.bat') && !output.includes('loader.bat')) {
-                    this.outputChannel.appendLine('--- xvlog output ---');
-                    this.outputChannel.appendLine(output);
+                // 过滤掉 Vivado 启动时的环境设置回显，只保留真正的日志
+                const lines = output.split('\n').filter(l => !l.includes('setupEnv') && !l.includes('loader.bat'));
+                if (lines.length > 0) {
+                    this.outputChannel.appendLine(lines.join('\n'));
                 }
             }
 
@@ -127,6 +124,7 @@ export default class VerilogLinter {
 
     private parseVivadoOutput(output: string, doc: vscode.TextDocument): vscode.Diagnostic[] {
         const diagnostics: vscode.Diagnostic[] = [];
+        // 匹配格式: ERROR: [VRFC 10-123] message [path:line]
         const regex = /(ERROR|WARNING):\s+\[(.*?)\]\s+(.*?)\s+\[.*?:(\d+)\]/g;
         
         let match;
@@ -137,11 +135,10 @@ export default class VerilogLinter {
             const line = parseInt(match[4]) - 1;
             
             if (line >= 0) {
-                diagnostics.push(new vscode.Diagnostic(
-                    new vscode.Range(line, 0, line, 1000),
-                    `${code}: ${msg}`,
-                    severity
-                ));
+                const range = new vscode.Range(line, 0, line, 1000);
+                const diagnostic = new vscode.Diagnostic(range, `${code}: ${msg}`, severity);
+                diagnostic.source = 'Vivado';
+                diagnostics.push(diagnostic);
             }
         }
         return diagnostics;
@@ -153,51 +150,70 @@ export default class VerilogLinter {
     private lintWithVerible(doc: vscode.TextDocument, config: vscode.WorkspaceConfiguration) {
         let binPath = config.get<string>('linter.veriblePath') || 'verible-verilog-lint';
         
-        if (process.platform === 'win32' && !binPath.endsWith('.exe') && binPath.includes('/')) {
-            binPath += '.exe';
+        // Windows 下自动补全 .exe
+        if (process.platform === 'win32' && !binPath.toLowerCase().endsWith('.exe')) {
+            // 只有当它看起来不像是一个全局命令时才补全 (包含路径分隔符)
+            if (binPath.includes('\\') || binPath.includes('/')) {
+                binPath += '.exe';
+            }
         }
 
-        const args = [doc.fileName];
-        this.outputChannel.appendLine(`[Exec] ${binPath} ${args.join(' ')}`);
+        const args = [
+            '--lint_fatal=false', // 确保 warning 不会变成 exit code 1
+            '--parse_fatal=false',
+            doc.fileName
+        ];
+        
+        this.outputChannel.appendLine(`[Verible Exec] ${binPath} ${args.join(' ')}`);
 
+        // 使用 execFile 比 exec 更安全，因为它可以自动处理参数中的空格
         cp.execFile(binPath, args, { cwd: path.dirname(doc.fileName) }, (error, stdout, stderr) => {
             const output = stderr.toString() + stdout.toString();
             
+            if (error) {
+                 if (error.code === 'ENOENT') {
+                    this.outputChannel.appendLine(`[Error] Verible not found: ${binPath}`);
+                    vscode.window.showErrorMessage(`无法启动 Verible Lint，请检查路径配置: ${binPath}`);
+                    return;
+                }
+            }
+
             if (output.trim().length > 0) {
-                this.outputChannel.appendLine('--- verible output ---');
-                this.outputChannel.appendLine(output);
+                // this.outputChannel.appendLine(output); // Verible output might be verbose
             }
 
             const diagnostics = this.parseVeribleOutput(output, doc);
             this.diagnosticCollection.set(doc.uri, diagnostics);
-
-            // @ts-ignore
-            if (error && error.code === 'ENOENT') {
-                this.outputChannel.appendLine(`[Error] Verible not found: ${binPath}`);
-                vscode.window.showErrorMessage(`无法启动 Verible Lint，请检查路径配置: ${binPath}`);
-            }
         });
     }
 
     private parseVeribleOutput(output: string, doc: vscode.TextDocument): vscode.Diagnostic[] {
         const diagnostics: vscode.Diagnostic[] = [];
-        // 兼容列号范围 (例如 5-13)
+        // 格式: path/to/file.sv:line:col: message
         const regex = /^(.*):(\d+):(\d+)(?:-\d+)?:\s+(.*)$/gm;
 
         let match;
         while ((match = regex.exec(output)) !== null) {
+            const filePath = match[1];
             const line = parseInt(match[2]) - 1;
             const col = parseInt(match[3]) - 1;
             const msg = match[4];
 
+            // 关键修复：检查报错的文件是否是当前文件
+            // Verible 可能会报告 include 文件中的错误，如果映射到当前文件行号会错乱
+            // 简单比对：检查解析出的路径是否包含在当前文档路径中，或者文件名相同
+            if (path.basename(filePath) !== path.basename(doc.fileName)) {
+                continue; 
+            }
+
             let severity = vscode.DiagnosticSeverity.Warning;
-            if (msg.toLowerCase().includes('error')) {
+            if (msg.toLowerCase().includes('error') || msg.toLowerCase().includes('fatal')) {
                 severity = vscode.DiagnosticSeverity.Error;
             }
             
             if (line >= 0) {
                 const range = new vscode.Range(line, col, line, 1000);
-                const diagnostic = new vscode.Diagnostic(range, `[Verible] ${msg}`, severity);
+                const diagnostic = new vscode.Diagnostic(range, msg, severity);
                 diagnostic.source = 'Verible';
                 diagnostics.push(diagnostic);
             }
