@@ -2,7 +2,7 @@
   "name": "hdl-helper",
   "displayName": "HDL Helper",
   "description": "FPGA/IC 全能助手：双引擎语法检查 (Vivado/Verible)、一键格式化、自动 Testbench、智能例化、LSP 跳转与大纲。",
-  "version": "2.3.4",
+  "version": "2.3.5",
   "publisher": "Cyrus",
   "engines": {
     "vscode": "^1.108.0"
@@ -119,40 +119,23 @@
         },
         "hdl-helper.linter.rules": {
           "type": "object",
-          "markdownDescription": "Verible Linter 规则配置。Key 是规则名，Value 可以是 `true`(启用), `false`(禁用/屏蔽), 或 `string`(传递参数)。\n\n查看所有规则请运行命令: **HDL Helper: List All Linter Rules**",
+          "markdownDescription": "Verible Linter 规则配置。\n\n* **Key**: 输入 Verible 规则名称 (例如 `always-comb`, `struct-union-name-style`)\n* **Value**: 输入 `true`(启用), `false`(禁用), 或配置字符串 (例如 `length:120`)\n\n可通过命令 `HDL Helper: List All Linter Rules` 查看所有可用规则。",
           "default": {
-              "no-trailing-spaces": true,
-              "no-tabs": true,
-              "line-length": "length:150"
-          },
-          "properties": {
-              "line-length": {
-                  "type": "string",
-                  "markdownDescription": "行宽限制规则。例如: `length:120`。如果想禁用此检查，请设为 `false`。"
-              },
-              "no-tabs": {
-                  "type": "boolean",
-                  "description": "禁止使用 Tab 键缩进，强制使用空格。"
-              },
-              "no-trailing-spaces": {
-                  "type": "boolean",
-                  "description": "禁止行尾出现多余空格。"
-              },
-              "parameter-name-style": {
-                  "type": "string",
-                  "markdownDescription": "参数命名风格。例如: `localparam_style:CamelCase`"
-              },
-              "always-comb": {
-                  "type": "boolean",
-                  "description": "检查是否使用 always_comb 代替 always @(*)。"
-              }
+            "line-length": "length:150",
+            "no-tabs": true,
+            "no-trailing-spaces": true
           },
           "additionalProperties": {
-              "anyOf": [
-                  { "type": "boolean" },
-                  { "type": "string" }
-              ],
-              "markdownDescription": "在此处添加其他 Verible 规则。例如 `\"case-missing-default\": true`"
+            "anyOf": [
+              {
+                "type": "boolean",
+                "description": "设置为 true 启用规则，false 禁用规则"
+              },
+              {
+                "type": "string",
+                "description": "传递具体的参数，例如 'length:120'"
+              }
+            ]
           }
         }
       }
