@@ -2,7 +2,7 @@
   "name": "hdl-helper",
   "displayName": "HDL Helper",
   "description": "FPGA/IC 全能助手：双引擎语法检查 (Vivado/Verible)、一键格式化、自动 Testbench、智能例化、LSP 跳转与大纲。",
-  "version": "2.1.0",
+  "version": "2.3.4",
   "publisher": "Cyrus",
   "engines": {
     "vscode": "^1.108.0"
@@ -56,6 +56,16 @@
          "command": "hdl-helper.copyInstantiation",
          "title": "HDL: Copy Instantiation Template",
          "category": "HDL Helper"
+      },
+      {
+        "command": "hdl-helper.generateDoc",
+        "title": "HDL: Generate Interface Doc",
+        "category": "HDL Helper"
+      },
+      {
+        "command": "hdl-helper.listLintRules",
+        "title": "HDL: List All Linter Rules",
+        "category": "HDL Helper" 
       }
     ],
     "configuration": {
@@ -107,16 +117,42 @@
           "default": "verible-verilog-ls",
           "description": "Path to verible-verilog-ls executable."
         },
-        "hdl-helper.formatter.flags": {
-          "type": "array",
-          "default": [
-            "--assignment_statement_alignment=preserve",
-            "--case_items_alignment=infer",
-            "--class_member_variable_alignment=infer"
-          ],
-          "markdownDescription": "Verible 格式化的高级参数列表。常用参数参考：\n\n* **对齐方式**: `align` (强制对齐), `preserve` (保持原样), `infer` (自动推断), `flush-left` (左对齐)\n* `--assignment_statement_alignment`: 赋值语句对齐 (=)\n* `--named_port_alignment`: 实例化端口对齐 (.port)\n* `--port_declarations_alignment`: 模块端口定义对齐 (input/output)\n* `--module_net_variable_alignment`: 内部信号声明对齐 (wire/reg)\n* `--column_limit=120`: 最大行宽\n* `--indentation_spaces=2`: 强制缩进空格数 (默认跟随 VS Code 设置)",
-          "items": {
-            "type": "string"
+        "hdl-helper.linter.rules": {
+          "type": "object",
+          "markdownDescription": "Verible Linter 规则配置。Key 是规则名，Value 可以是 `true`(启用), `false`(禁用/屏蔽), 或 `string`(传递参数)。\n\n查看所有规则请运行命令: **HDL Helper: List All Linter Rules**",
+          "default": {
+              "no-trailing-spaces": true,
+              "no-tabs": true,
+              "line-length": "length:150"
+          },
+          "properties": {
+              "line-length": {
+                  "type": "string",
+                  "markdownDescription": "行宽限制规则。例如: `length:120`。如果想禁用此检查，请设为 `false`。"
+              },
+              "no-tabs": {
+                  "type": "boolean",
+                  "description": "禁止使用 Tab 键缩进，强制使用空格。"
+              },
+              "no-trailing-spaces": {
+                  "type": "boolean",
+                  "description": "禁止行尾出现多余空格。"
+              },
+              "parameter-name-style": {
+                  "type": "string",
+                  "markdownDescription": "参数命名风格。例如: `localparam_style:CamelCase`"
+              },
+              "always-comb": {
+                  "type": "boolean",
+                  "description": "检查是否使用 always_comb 代替 always @(*)。"
+              }
+          },
+          "additionalProperties": {
+              "anyOf": [
+                  { "type": "boolean" },
+                  { "type": "string" }
+              ],
+              "markdownDescription": "在此处添加其他 Verible 规则。例如 `\"case-missing-default\": true`"
           }
         }
       }
@@ -204,6 +240,11 @@
           "command": "hdl-helper.generateTB",
           "when": "view == hdl-hierarchy-view && viewItem == module",
           "group": "2_codegen"
+        },
+        {
+          "command": "hdl-helper.generateDoc",
+          "when": "view == hdl-hierarchy-view && viewItem == module",
+          "group": "3_documentation"
         }
       ]
     },

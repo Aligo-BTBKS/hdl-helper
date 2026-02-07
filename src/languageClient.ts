@@ -3,96 +3,93 @@ import {
     LanguageClient,
     LanguageClientOptions,
     ServerOptions,
-    TransportKind
+    StreamInfo
 } from 'vscode-languageclient/node';
 import * as path from 'path';
+import * as cp from 'child_process';
 import * as fs from 'fs';
+import { runVeribleFormat } from './formatter'; 
 
 let client: LanguageClient;
 
 export function activateLanguageServer(context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration('hdl-helper');
-    const enabled = config.get<boolean>('languageServer.enabled');
-    
-    if (!enabled) return;
+    if (!config.get<boolean>('languageServer.enabled')) return;
 
-    // 1. 获取并处理路径
     let serverPath = config.get<string>('languageServer.path') || 'verible-verilog-ls';
-    
-    // Windows 下简单的路径修正
-    if (process.platform === 'win32' && !serverPath.endsWith('.exe')) {
-        // 如果包含路径分隔符，说明不是全局命令，尝试补全 .exe
-        if (serverPath.includes('\\') || serverPath.includes('/')) {
-             serverPath += '.exe';
-        }
+
+    // Windows 路径修正
+    if (process.platform === 'win32') {
+         if (!serverPath.toLowerCase().endsWith('.exe')) {
+             if (path.isAbsolute(serverPath) || serverPath.includes('\\')) {
+                 serverPath += '.exe';
+             }
+         }
     }
 
-    // 检查可执行文件是否存在 (如果是绝对路径)
     if (path.isAbsolute(serverPath) && !fs.existsSync(serverPath)) {
-        vscode.window.showErrorMessage(`Verible LS path invalid: ${serverPath}`);
-        return;
+        console.warn(`[LSP] Binary not found: ${serverPath}`); 
     }
 
-    // 2. 创建 Output Channel (让用户能看到 LSP 的日志)
     const outputChannel = vscode.window.createOutputChannel('HDL Helper LSP');
-    outputChannel.appendLine(`[Init] Starting Verible LS from: ${serverPath}`);
 
-    // 3. 定义 Server Options (使用标准 Executable 模式)
-    const serverOptions: ServerOptions = {
-        run: { 
-            command: serverPath, 
-            args: [], // Verible 通常不需要额外参数，除非你想加 --rules_config
-            transport: TransportKind.stdio 
-        },
-        debug: { 
-            command: serverPath, 
-            args: [], 
-            transport: TransportKind.stdio 
-        }
+    const serverOptions: ServerOptions = async (): Promise<StreamInfo> => {
+        const cwd = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+        
+        // =================================================================
+        // [绝杀修复 2.0] 批量禁用 LSP 的干扰规则
+        // =================================================================
+        // 我们不希望 LSP 对代码风格指手画脚，这些全部交给 lint.ts 和 formatter.ts
+        // 这里的减号 "-" 表示禁用该规则
+        const disabledRules = [
+            '-line-length',              // 禁用行宽检查
+            '-parameter-name-style',     // 禁用参数命名检查 (你刚才遇到的)
+            '-no-tabs',                  // 禁用 Tab 检查
+            '-no-trailing-spaces',       // 禁用尾部空格检查
+            '-generate-label',           // 禁用 generate 标签检查 (可选)
+            '-always-comb'               // 禁用组合逻辑写法检查 (可选)
+        ];
+
+        const args = [
+            `--rules=${disabledRules.join(',')}`, // 拼接成参数字符串
+            '--rules_config_search=false'         // 禁止搜索 .rules 文件
+        ]; 
+
+        const child = cp.spawn(serverPath, args, { 
+            cwd: cwd, 
+            env: process.env, 
+            shell: false 
+        });
+        
+        child.on('error', err => outputChannel.appendLine(`[Error] ${err.message}`));
+        
+        return Promise.resolve({
+            reader: child.stdout!, 
+            writer: child.stdin!
+        });
     };
 
-    // 4. 定义 Client Options
     const clientOptions: LanguageClientOptions = {
         documentSelector: [
             { scheme: 'file', language: 'verilog' },
             { scheme: 'file', language: 'systemverilog' }
         ],
-        synchronize: {
-            fileEvents: vscode.workspace.createFileSystemWatcher('**/*.{v,sv,vh,svh}')
-        },
         outputChannel: outputChannel,
-        traceOutputChannel: outputChannel,
-
-        // 🔥🔥🔥 核心修复在这里 🔥🔥🔥
-        // 我们要禁止 LSP 注册它自己的 Formatter，因为我们有更高级的 VerilogFormatter
+        
         middleware: {
-            provideDocumentFormattingEdits: (document, options, token, next) => {
-                // 直接返回 null，表示 LSP 不处理格式化
-                // 这样 VS Code 就只会使用我们在 extension.ts 里注册的那个 Formatter
-                return null; 
+            provideDocumentFormattingEdits: async (document, options, token, next) => {
+                return await runVeribleFormat(document, options, token);
+            },
+            handleDiagnostics: (uri, diagnostics, next) => {
+                next(uri, []); 
             }
         }
     };
 
-    // 5. 启动客户端
-    client = new LanguageClient(
-        'veribleLS',
-        'Verible Language Server',
-        serverOptions,
-        clientOptions
-    );
-
-    client.start().then(() => {
-        outputChannel.appendLine('[Success] LSP Started.');
-    }).catch(error => {
-        outputChannel.appendLine(`[Error] LSP Start Failed: ${error}`);
-        vscode.window.showErrorMessage(`Verible LSP 启动失败，请检查路径配置。`);
-    });
+    client = new LanguageClient('veribleLS', 'Verible LS', serverOptions, clientOptions);
+    client.start().catch(e => console.error(e));
 }
 
-export function deactivateLanguageServer(): Thenable<void> | undefined {
-    if (!client) {
-        return undefined;
-    }
-    return client.stop();
+export function deactivateLanguageServer() {
+    return client ? client.stop() : undefined;
 }

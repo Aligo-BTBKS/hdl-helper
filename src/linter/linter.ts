@@ -49,9 +49,6 @@ export default class VerilogLinter implements vscode.Disposable {
         const config = vscode.workspace.getConfiguration('hdl-helper');
         const tool = config.get<string>('linter.tool') || 'xvlog';
 
-        // 避免日志刷屏，只有改变工具或出错时才重点关注，但为了调试保留这行
-        // this.outputChannel.appendLine(`[Linter] Tool selected: ${tool}`);
-
         if (tool === 'verible-lint') {
             this.lintWithVerible(doc, config);
         } else {
@@ -68,9 +65,7 @@ export default class VerilogLinter implements vscode.Disposable {
         
         // 1. 路径处理与补全
         if (isWindows) {
-            // 如果不是 .bat 或 .exe 结尾，且不是简单的命令名(xvlog)，尝试追加 .bat
             if (!binPath.toLowerCase().endsWith('.bat') && !binPath.toLowerCase().endsWith('.exe')) {
-                // 如果是绝对路径，或者看起来像路径
                 if (path.isAbsolute(binPath) || binPath.includes('\\') || binPath.includes('/')) {
                     binPath += '.bat';
                 }
@@ -85,8 +80,7 @@ export default class VerilogLinter implements vscode.Disposable {
         // 文件名必须加引号，防止空格
         args.push(`"${doc.fileName}"`);
 
-        // 3. 构造命令
-        // 使用引号包裹可执行文件路径，防止 "Program Files" 空格问题
+        // 3. 构造命令 (exec 需要手动处理引号)
         const cmd = `"${binPath}" ${args.join(' ')}`;
 
         this.outputChannel.appendLine(`[Vivado Exec] ${cmd}`);
@@ -94,13 +88,9 @@ export default class VerilogLinter implements vscode.Disposable {
         cp.exec(cmd, { cwd: path.dirname(doc.fileName) }, (error, stdout, stderr) => {
             const output = stdout.toString() + stderr.toString();
             
-            // 错误处理: 检查命令是否未找到
             if (error) {
-                // 常见的 Windows/Linux "未找到命令" 错误码
-                // Fix: 使用 (error as any).code 解决 TS 报错，因为 ENOENT 是字符串
                 if ((error as any).code === 'ENOENT' || error.code === 127 || output.includes('is not recognized')) {
                     this.outputChannel.appendLine(`[Error] Vivado executable not found: ${binPath}`);
-                    // 仅当用户明确配置了路径时才频繁弹窗，否则只在输出台显示，避免骚扰
                     if (path.isAbsolute(binPath)) {
                         vscode.window.showErrorMessage(`无法找到 Vivado (xvlog)。请检查设置中的路径。`);
                     }
@@ -108,9 +98,7 @@ export default class VerilogLinter implements vscode.Disposable {
                 }
             }
 
-            // 调试日志
             if (output.trim().length > 0) {
-                // 过滤掉 Vivado 启动时的环境设置回显，只保留真正的日志
                 const lines = output.split('\n').filter(l => !l.includes('setupEnv') && !l.includes('loader.bat'));
                 if (lines.length > 0) {
                     this.outputChannel.appendLine(lines.join('\n'));
@@ -124,7 +112,6 @@ export default class VerilogLinter implements vscode.Disposable {
 
     private parseVivadoOutput(output: string, doc: vscode.TextDocument): vscode.Diagnostic[] {
         const diagnostics: vscode.Diagnostic[] = [];
-        // 匹配格式: ERROR: [VRFC 10-123] message [path:line]
         const regex = /(ERROR|WARNING):\s+\[(.*?)\]\s+(.*?)\s+\[.*?:(\d+)\]/g;
         
         let match;
@@ -145,41 +132,82 @@ export default class VerilogLinter implements vscode.Disposable {
     }
 
     // =========================================================
-    // 引擎 B: Verible Lint (Google)
+    // 引擎 B: Verible Lint (Google) - 最终修复版
     // =========================================================
     private lintWithVerible(doc: vscode.TextDocument, config: vscode.WorkspaceConfiguration) {
         let binPath = config.get<string>('linter.veriblePath') || 'verible-verilog-lint';
         
-        // Windows 下自动补全 .exe
         if (process.platform === 'win32' && !binPath.toLowerCase().endsWith('.exe')) {
-            // 只有当它看起来不像是一个全局命令时才补全 (包含路径分隔符)
             if (binPath.includes('\\') || binPath.includes('/')) {
                 binPath += '.exe';
             }
         }
 
+        // 1. 获取规则配置
+        const rulesConfig = config.get<{[key: string]: boolean | string}>('linter.rules') || {};
+
+        // 2. 自动同步 Formatter 的行宽
+        if (rulesConfig['line-length'] === undefined) {
+             const formatFlags = config.get<string[]>('formatter.flags') || [];
+             const limitFlag = formatFlags.find(f => f.includes('--column_limit'));
+             
+             if (limitFlag) {
+                 const match = limitFlag.match(/[= ](\d+)/);
+                 if (match) {
+                     rulesConfig['line-length'] = `length:${match[1]}`;
+                 }
+             } else {
+                 rulesConfig['line-length'] = `length:150`; // 默认保底
+             }
+        }
+
+        // 3. 构建 rules 字符串列表
+        const ruleList: string[] = [];
+
+        for (const [ruleName, value] of Object.entries(rulesConfig)) {
+            if (value === false) {
+                // 布尔 false -> 禁用规则
+                ruleList.push(`-${ruleName}`);
+            } else if (value === true) {
+                // 布尔 true -> 启用规则 (无配置)
+                ruleList.push(ruleName);
+            } else if (typeof value === 'string') {
+                // [关键修复] 处理字符串类型的 "true"/"false"
+                // 很多用户会在 json 里误写成字符串，这里做个兼容
+                if (value === 'true') {
+                    ruleList.push(ruleName); // 等同于启用
+                } else if (value === 'false') {
+                    ruleList.push(`-${ruleName}`); // 等同于禁用
+                } else {
+                    // 真正的配置字符串，比如 "length:150"
+                    ruleList.push(`${ruleName}=${value}`);
+                }
+            }
+        }
+
+        // 4. 构造参数数组
+        // [关键优化] 将 flag 和 value 拆开。
+        // 这是 execFile 最安全的方式，Node.js 会自动处理它们之间的关联，
+        // 彻底杜绝了 "parameter-name-style=true" 这种因为解析歧义导致的整段丢弃问题。
         const args = [
-            '--lint_fatal=false', // 确保 warning 不会变成 exit code 1
+            '--lint_fatal=false', 
             '--parse_fatal=false',
+            '--rules',           // 参数名
+            ruleList.join(','),  // 参数值
             doc.fileName
         ];
         
-        this.outputChannel.appendLine(`[Verible Exec] ${binPath} ${args.join(' ')}`);
+        // 打印调试日志
+        this.outputChannel.appendLine(`[Verible Exec] "${binPath}" ${args.map(a => a.includes(' ') ? `"${a}"` : a).join(' ')}`);
 
-        // 使用 execFile 比 exec 更安全，因为它可以自动处理参数中的空格
         cp.execFile(binPath, args, { cwd: path.dirname(doc.fileName) }, (error, stdout, stderr) => {
             const output = stderr.toString() + stdout.toString();
             
             if (error) {
-                 if (error.code === 'ENOENT') {
+                 if ((error as any).code === 'ENOENT') {
                     this.outputChannel.appendLine(`[Error] Verible not found: ${binPath}`);
-                    vscode.window.showErrorMessage(`无法启动 Verible Lint，请检查路径配置: ${binPath}`);
                     return;
                 }
-            }
-
-            if (output.trim().length > 0) {
-                // this.outputChannel.appendLine(output); // Verible output might be verbose
             }
 
             const diagnostics = this.parseVeribleOutput(output, doc);
@@ -189,7 +217,6 @@ export default class VerilogLinter implements vscode.Disposable {
 
     private parseVeribleOutput(output: string, doc: vscode.TextDocument): vscode.Diagnostic[] {
         const diagnostics: vscode.Diagnostic[] = [];
-        // 格式: path/to/file.sv:line:col: message
         const regex = /^(.*):(\d+):(\d+)(?:-\d+)?:\s+(.*)$/gm;
 
         let match;
@@ -199,9 +226,7 @@ export default class VerilogLinter implements vscode.Disposable {
             const col = parseInt(match[3]) - 1;
             const msg = match[4];
 
-            // 关键修复：检查报错的文件是否是当前文件
-            // Verible 可能会报告 include 文件中的错误，如果映射到当前文件行号会错乱
-            // 简单比对：检查解析出的路径是否包含在当前文档路径中，或者文件名相同
+            // 过滤非当前文件的报错
             if (path.basename(filePath) !== path.basename(doc.fileName)) {
                 continue; 
             }

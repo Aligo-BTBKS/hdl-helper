@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import VerilogLinter from './linter/linter';
 import VerilogFormatter from './formatter';
+import * as cp from 'child_process';
 // 引入原有的功能函数
 import { generateTestbench } from './commands/generateTB';
 import { instantiateModule } from './commands/instantiateModule';
@@ -14,6 +15,8 @@ import { HdlModule } from './project/hdlSymbol';
 import { VerilogDefinitionProvider } from './providers/defProvider';
 import { VerilogHoverProvider } from './providers/hoverProvider';
 import { CodeGenerator } from './utils/codeGenerator'
+import { DocGenerator } from './utils/docGenerator'
+
 
 // 全局变量，方便 deactivate 使用
 let projectManager: ProjectManager;
@@ -143,6 +146,76 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
         modules.forEach(m => console.log(`📦 ${m.name} (${path.basename(m.fileUri.fsPath)})`));
     }));
+
+    // G. 生成接口文档 (Markdown) - 右键菜单触发
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.generateDoc', async (item: HdlModule) => {
+        if (!item || !(item instanceof HdlModule)) return;
+
+        try {
+            // 1. 生成 Markdown 内容
+            const mdContent = DocGenerator.generateMarkdown(item);
+
+            // 2. 创建一个虚拟的 Markdown 文档
+            const doc = await vscode.workspace.openTextDocument({
+                content: mdContent,
+                language: 'markdown'
+            });
+
+            // 3. 在侧边栏显示 (ViewColumn.Beside)
+            await vscode.window.showTextDocument(doc, {
+                preview: false, // 不作为预览模式，而是可编辑的新文件
+                viewColumn: vscode.ViewColumn.Beside
+            });
+        } catch (e) {
+            vscode.window.showErrorMessage(`生成文档失败: ${e}`);
+        }
+    }));
+
+    // =========================================================================
+    // 修复后的命令：查看 Linter 规则帮助
+    // =========================================================================
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.listLintRules', async () => {
+        const config = vscode.workspace.getConfiguration('hdl-helper');
+        let binPath = config.get<string>('linter.veriblePath') || 'verible-verilog-lint';
+        
+        // 1. Windows 路径修正
+        if (process.platform === 'win32') {
+             if (!binPath.toLowerCase().endsWith('.exe')) {
+                 if (path.isAbsolute(binPath) || binPath.includes('\\') || binPath.includes('/')) {
+                     binPath += '.exe';
+                 }
+             }
+        }
+
+        vscode.window.setStatusBarMessage('$(sync~spin) 正在获取 Verible 规则列表...', 2000);
+
+        // 2. 构造 Shell 命令
+        // [修复] 必须显式加上 =all，否则 Google 的参数解析库会报 "Missing value"
+        const cmd = `"${binPath}" --help_rules=all`;
+
+        // console.log(`[Exec] ${cmd}`); 
+
+        cp.exec(cmd, (err, stdout, stderr) => {
+            if (err && (err as any).code === 127) { 
+                vscode.window.showErrorMessage(`无法找到 Verible 工具: ${binPath}`);
+                return;
+            }
+
+            const output = stdout.trim() || stderr.trim();
+
+            if (output) {
+                vscode.workspace.openTextDocument({
+                    content: output,
+                    language: 'markdown' 
+                }).then(doc => {
+                    vscode.window.showTextDocument(doc, { preview: false });
+                });
+            } else {
+                vscode.window.showErrorMessage(`获取失败。请尝试在终端运行: "${binPath}" --help_rules=all`);
+            }
+        });
+    }));
+
 
     // =========================================================================
     // 4. 启动 Language Server
