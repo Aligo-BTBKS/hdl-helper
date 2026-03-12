@@ -8,6 +8,9 @@ import { generateTestbench } from './commands/generateTB';
 import { instantiateModule } from './commands/instantiateModule';
 import { autoDeclareSignals } from './commands/autoDeclare';
 import { visualizeFsm } from './commands/generateFsm';
+import { generateAxiCommand } from './commands/generateAxi';
+import { generateMemoryCommand } from './commands/generateMemory';
+import { generateRegistersCommand } from './commands/generateRegisters';
 import { activateLanguageServer, deactivateLanguageServer } from './languageClient';
 // 引入 V2.0 工程核心
 import { ProjectManager } from './project/projectManager';
@@ -117,6 +120,17 @@ export function activate(context: vscode.ExtensionContext) {
         try { await visualizeFsm(); } catch (e) { vscode.window.showErrorMessage(`${e}`); }
     });
     context.subscriptions.push(fsmCmd);
+
+    // --- Phase 10: Advanced Code Generators ---
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.generateAxi', async () => {
+        try { await generateAxiCommand(); } catch (e) { vscode.window.showErrorMessage(`${e}`); }
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.generateMemory', async () => {
+        try { await generateMemoryCommand(); } catch (e) { vscode.window.showErrorMessage(`${e}`); }
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.generateRegisters', async () => {
+        try { await generateRegistersCommand(); } catch (e) { vscode.window.showErrorMessage(`${e}`); }
+    }));
 
     // D. 复制实例化模板 (树节点右键)
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.copyInstantiation', async (item: HdlModule) => {

@@ -97,6 +97,21 @@
         "command": "hdl-helper.generateFsm",
         "title": "HDL: Visualize FSM (Mermaid)",
         "category": "HDL Helper"
+      },
+      {
+        "command": "hdl-helper.generateAxi",
+        "title": "HDL: Generate AXI Interface",
+        "category": "HDL Helper"
+      },
+      {
+        "command": "hdl-helper.generateMemory",
+        "title": "HDL: Generate Memory IP (FIFO/RAM)",
+        "category": "HDL Helper"
+      },
+      {
+        "command": "hdl-helper.generateRegisters",
+        "title": "HDL: Generate Register Map from File",
+        "category": "HDL Helper"
       }
     ],
     "configuration": {
@@ -269,6 +284,18 @@
           "command": "hdl-helper.generateFsm",
           "group": "hdl-group@4",
           "when": "editorTextFocus && (resourceLangId == verilog || resourceLangId == systemverilog)"
+        },
+        {
+          "command": "hdl-helper.generateAxi",
+          "group": "hdl-group@5"
+        },
+        {
+          "command": "hdl-helper.generateMemory",
+          "group": "hdl-group@5"
+        },
+        {
+          "command": "hdl-helper.generateRegisters",
+          "group": "hdl-group@5"
         }
       ],
       "view/title": [
