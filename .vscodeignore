@@ -12,9 +12,9 @@ test/**
 tsconfig.json
 .eslintrc.json
 images/**
-snippets/
+snippets/**
 push.ps1
 cmd.txt
-!snippets/*.json
+!snippets/**/*.json
 !images/icon_min.png
 !resources/**
