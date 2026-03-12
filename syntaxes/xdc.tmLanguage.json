@@ -1,0 +1,75 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "Xilinx Design Constraints",
+    "patterns": [
+        {
+            "include": "#comments"
+        },
+        {
+            "include": "#keywords"
+        },
+        {
+            "include": "#strings"
+        },
+        {
+            "include": "#properties"
+        }
+    ],
+    "repository": {
+        "comments": {
+            "patterns": [
+                {
+                    "name": "comment.line.number-sign.xdc",
+                    "match": "#.*$"
+                }
+            ]
+        },
+        "keywords": {
+            "patterns": [
+                {
+                    "name": "keyword.control.xdc",
+                    "match": "\\b(set_property|get_ports|create_clock|set_input_delay|set_output_delay|set_max_delay|set_min_delay|set_false_path|set_multicycle_path|get_clocks|get_pins|get_nets|get_cells)\\b"
+                }
+            ]
+        },
+        "strings": {
+            "patterns": [
+                {
+                    "name": "string.quoted.double.xdc",
+                    "begin": "\"",
+                    "end": "\"",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.xdc",
+                            "match": "\\\\."
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.single.xdc",
+                    "begin": "'",
+                    "end": "'",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.xdc",
+                            "match": "\\\\."
+                        }
+                    ]
+                }
+            ]
+        },
+        "properties": {
+            "patterns": [
+                {
+                    "name": "support.constant.xdc",
+                    "match": "\\b(PACKAGE_PIN|IOSTANDARD|PULLUP|PULLDOWN|SLEW|DRIVE|LOC|BEL)\\b"
+                },
+                {
+                    "name": "constant.numeric.xdc",
+                    "match": "\\b(LVCMOS33|LVCMOS25|LVCMOS18|LVCMOS15|LVCMOS12|SSTL15|SSTL135|LVDS|LVDS_25|DIFF_SSTL15)\\b"
+                }
+            ]
+        }
+    },
+    "scopeName": "source.xdc"
+}

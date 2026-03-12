@@ -66,6 +66,26 @@
         "command": "hdl-helper.listLintRules",
         "title": "HDL: List All Linter Rules",
         "category": "HDL Helper"
+      },
+      {
+        "command": "hdl-helper.runSimulation",
+        "title": "HDL: Run Simulation",
+        "category": "HDL Helper"
+      },
+      {
+        "command": "hdl-helper.viewWaveform",
+        "title": "HDL: View Waveform",
+        "category": "HDL Helper"
+      },
+      {
+        "command": "hdl-helper.runVivadoSynth",
+        "title": "HDL: Run Vivado Synthesis",
+        "category": "HDL Helper"
+      },
+      {
+        "command": "hdl-helper.runVivadoImpl",
+        "title": "HDL: Run Vivado Implementation",
+        "category": "HDL Helper"
       }
     ],
     "configuration": {
@@ -301,6 +321,11 @@
           ".sva"
         ],
         "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "xdc",
+        "aliases": ["Xilinx Design Constraints", "xdc", "sdc"],
+        "extensions": [".xdc", ".sdc"]
       }
     ],
     "grammars": [
@@ -313,6 +338,11 @@
         "language": "systemverilog",
         "scopeName": "source.systemverilog",
         "path": "./syntaxes/systemverilog.tmLanguage.json"
+      },
+      {
+        "language": "xdc",
+        "scopeName": "source.xdc",
+        "path": "./syntaxes/xdc.tmLanguage.json"
       }
     ]
   },

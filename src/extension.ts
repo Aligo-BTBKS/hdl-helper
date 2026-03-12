@@ -21,6 +21,8 @@ import { VerilogCompletionProvider } from './providers/completionProvider';
 import { SimCodeLensProvider } from './providers/simCodeLensProvider';
 import { SimManager } from './simulation/simManager';
 import { WaveformViewer } from './simulation/waveformViewer';
+import { VivadoBridge } from './eda/vivadoBridge';
+import { XdcCompletionProvider } from './providers/xdcCompletionProvider';
 import { CodeGenerator } from './utils/codeGenerator'
 import { DocGenerator } from './utils/docGenerator'
 
@@ -216,6 +218,42 @@ export function activate(context: vscode.ExtensionContext) {
         }
         WaveformViewer.show(context.extensionUri, waveformPath);
     }));
+
+    // =========================================================================
+    // 8. 注册 EDA 工具 (Vivado 集成, Phase 7)
+    // =========================================================================
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.runVivadoSynth', async () => {
+        if (!vscode.workspace.workspaceFolders) {
+            vscode.window.showErrorMessage('Please open a workspace first.');
+            return;
+        }
+        const wsPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
+        // 这里需要获取实际的 top module，我们暂时通过用户输入来获取
+        const topModule = await vscode.window.showInputBox({ 
+            prompt: 'Enter top module name for Synthesis',
+            value: 'top'
+        });
+        if (topModule) {
+            await VivadoBridge.runSynth(wsPath, topModule);
+        }
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.runVivadoImpl', async () => {
+        if (!vscode.workspace.workspaceFolders) {
+            vscode.window.showErrorMessage('Please open a workspace first.');
+            return;
+        }
+        const wsPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
+        await VivadoBridge.runImpl(wsPath);
+    }));
+
+    const xdcCompletionProvider = new XdcCompletionProvider(projectManager);
+    context.subscriptions.push(
+        vscode.languages.registerCompletionItemProvider(
+            ['xdc'],
+            xdcCompletionProvider
+        )
+    );
 
     // --- F. 调试命令 ---
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.debugProject', () => {
