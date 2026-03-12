@@ -160,6 +160,17 @@ export class ProjectManager {
     }
 
     /**
+     * 获取指定文件内的所有模块
+     * 用于在文件中定位当前的 HdlModule 上下文上下文
+     */
+    public getModulesInFile(fsPath: string): HdlModule[] {
+        const moduleNames = this.fileMap.get(fsPath) || [];
+        return moduleNames
+            .map(name => this.moduleMap.get(name))
+            .filter((m): m is HdlModule => m !== undefined);
+    }
+
+    /**
      * 获取工程中所有 HDL 文件的去重目录列表
      * 供 VerilatorEngine 注入 -y / -I 搜索路径，消除跨文件例化误报
      */

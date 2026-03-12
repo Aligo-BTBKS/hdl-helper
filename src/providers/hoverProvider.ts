@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ProjectManager } from '../project/projectManager';
-import { HdlModule } from '../project/hdlSymbol';
+import { HdlModule, HdlSymbol } from '../project/hdlSymbol';
 import * as path from 'path';
 
 export class VerilogHoverProvider implements vscode.HoverProvider {
@@ -18,18 +18,58 @@ export class VerilogHoverProvider implements vscode.HoverProvider {
         
         const word = document.getText(range);
 
-        // 2. 去数据库里查：这是一个模块名吗？
-        const module = this.projectManager.getModule(word);
+        // 2. 这是一个模块名吗？
+        const hdlModule = this.projectManager.getModule(word);
         
-        if (module) {
-            // 3. 如果是，构建 Markdown 内容
-            return this.buildHoverContent(module);
+        if (hdlModule) {
+            return this.buildModuleHover(hdlModule);
+        }
+
+        // 3. Phase 5: 这是一个局部信号/局部参数吗？
+        const currentModules = this.projectManager.getModulesInFile(document.uri.fsPath);
+        for (const mod of currentModules) {
+            if (mod.range.contains(position)) {
+                const sym = mod.symbols.find(s => s.name === word);
+                if (sym) {
+                    return this.buildSymbolHover(sym);
+                }
+            }
         }
 
         return null;
     }
 
-    private buildHoverContent(module: HdlModule): vscode.Hover {
+    private buildSymbolHover(sym: HdlSymbol): vscode.Hover {
+        const md = new vscode.MarkdownString();
+        
+        // 标识符种类图标
+        const icon = sym.kind === 'port' ? '🔌' : 
+                     sym.kind === 'parameter' || sym.kind === 'localparam' ? '⚙️' : '📌';
+        
+        // --- 类型签名 ---
+        // 参数/端口可能自己带有完整声明文本，如 "parameter WIDTH = 32" 或 "input wire clk"
+        // 普通信号如 "wire [31:0]"，需拼上信号名
+        let sigText = sym.type;
+        if (sym.kind !== 'parameter' && sym.kind !== 'localparam' && !sigText.endsWith(sym.name)) {
+            sigText = `${sym.type} ${sym.name};`;
+        }
+
+        md.appendMarkdown(`### ${icon} ${sym.kind}: **${sym.name}**\n`);
+        md.appendMarkdown(`---\n`);
+        md.appendCodeblock(sigText, 'verilog');
+        
+        // --- 提取的源码注释 ---
+        if (sym.comment) {
+            md.appendMarkdown(`\n> ${sym.comment}\n`);
+        }
+        
+        md.appendMarkdown(`\n*(Declared at line ${sym.range.start.line + 1})*`);
+        
+        md.isTrusted = true;
+        return new vscode.Hover(md);
+    }
+
+    private buildModuleHover(module: HdlModule): vscode.Hover {
         const md = new vscode.MarkdownString();
         
         // --- 标题 ---

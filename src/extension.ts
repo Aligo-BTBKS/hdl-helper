@@ -14,6 +14,10 @@ import { HdlTreeProvider } from './project/hdlTreeProvider';
 import { HdlModule } from './project/hdlSymbol';
 import { VerilogDefinitionProvider } from './providers/defProvider';
 import { VerilogHoverProvider } from './providers/hoverProvider';
+import { VerilogOutlineProvider } from './providers/outlineProvider';
+import { VerilogReferenceProvider } from './providers/referenceProvider';
+import { VerilogRenameProvider } from './providers/renameProvider';
+import { VerilogCompletionProvider } from './providers/completionProvider';
 import { CodeGenerator } from './utils/codeGenerator'
 import { DocGenerator } from './utils/docGenerator'
 
@@ -134,13 +138,47 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     // =========================================================================
-    // 6. 注册悬停提示 (Hover)
+    // 6. 注册悬停提示 (Hover) 与 文档大纲 (Document Symbol)
     // =========================================================================
     const hoverProvider = new VerilogHoverProvider(projectManager);
     context.subscriptions.push(
         vscode.languages.registerHoverProvider(
             ['verilog', 'systemverilog'],
             hoverProvider
+        )
+    );
+
+    const outlineProvider = new VerilogOutlineProvider(projectManager);
+    context.subscriptions.push(
+        vscode.languages.registerDocumentSymbolProvider(
+            ['verilog', 'systemverilog'],
+            outlineProvider
+        )
+    );
+
+    const referenceProvider = new VerilogReferenceProvider(projectManager);
+    context.subscriptions.push(
+        vscode.languages.registerReferenceProvider(
+            ['verilog', 'systemverilog'],
+            referenceProvider
+        )
+    );
+
+    const renameProvider = new VerilogRenameProvider(projectManager);
+    context.subscriptions.push(
+        vscode.languages.registerRenameProvider(
+            ['verilog', 'systemverilog'],
+            renameProvider
+        )
+    );
+
+    const completionProvider = new VerilogCompletionProvider(projectManager);
+    context.subscriptions.push(
+        vscode.languages.registerCompletionItemProvider(
+            ['verilog', 'systemverilog'],
+            completionProvider,
+            '.', // trigger character
+            '`'  // optional trigger character for macros
         )
     );
 

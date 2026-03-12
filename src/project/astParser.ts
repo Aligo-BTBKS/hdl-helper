@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { HdlModule, HdlInstance, HdlPort, HdlParam } from './hdlSymbol';
+import { HdlModule, HdlInstance, HdlPort, HdlParam, HdlSymbol, HdlSymbolKind } from './hdlSymbol';
 
 // 动态 require web-tree-sitter (在 VS Code Extension Host 中运行)
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -145,21 +145,35 @@ export class AstParser {
 
         if (!moduleName || !nameNode) return null;
 
-        // 构造模块所在 Range（行列号，0-indexed）
-        const moduleRange = new vscode.Range(
+        // 构造模块名字的 Range
+        const nameRange = new vscode.Range(
             nameNode.startPosition.row,
             nameNode.startPosition.column,
             nameNode.endPosition.row,
             nameNode.endPosition.column
         );
 
-        const hdlModule = new HdlModule(moduleName, uri, moduleRange);
+        // 构造整个模块 Block 的 Range
+        const bodyRange = new vscode.Range(
+            node.startPosition.row,
+            node.startPosition.column,
+            node.endPosition.row,
+            node.endPosition.column
+        );
+
+        const hdlModule = new HdlModule(moduleName, uri, bodyRange, nameRange);
 
         // 提取端口和参数
         AstParser.extractPortsAndParams(node, hdlModule);
 
         // 提取内部实例化
         AstParser.extractInstances(node, hdlModule, uri);
+
+        // Phase 5: 提取模块内部所有信号符号（wire/reg/logic/integer/genvar）
+        AstParser.extractSymbols(node, hdlModule, fullText, uri);
+
+        // Phase 5.2: 提取所有的引用，填充到 HdlSymbol.references
+        AstParser.extractReferences(node, hdlModule);
 
         return hdlModule;
     }
@@ -282,5 +296,187 @@ export class AstParser {
             AstParser.outputChannel.appendLine(msg);
         }
         console.log(msg);
+    }
+
+    // =================================================================
+    // Phase 5: Symbol Table 提取
+    // =================================================================
+
+    /**
+     * 节点类型 → HdlSymbolKind 的映射
+     * Tree-sitter Verilog 的 net/variable declaration 节点类型可能的值
+     */
+    private static readonly DECL_NODE_TYPES: Record<string, HdlSymbolKind> = {
+        'net_declaration':       'wire',
+        'reg_declaration':       'reg',
+        'data_declaration':      'logic',
+        'integer_declaration':   'integer',
+        'real_declaration':      'real',
+        'genvar_declaration':    'genvar',
+        'local_parameter_declaration': 'localparam',
+    };
+
+    /**
+     * 从 module_declaration 中提取所有内部信号声明，填充到 hdlModule.symbols
+     * "阅后即焚"策略：只提取轻量级 HdlSymbol，不保留 AST 节点引用
+     */
+    private static extractSymbols(
+        moduleNode: any,
+        hdlModule: HdlModule,
+        fullText: string,
+        uri: vscode.Uri
+    ): void {
+        const lines = fullText.split('\n');
+
+        // 1. 将端口也加入符号表（kind='port'）
+        for (const port of hdlModule.ports) {
+            // 找端口在文本中的位置（用简单的文本搜索，因为端口的 AST
+            // 节点已经在 extractPortsAndParams 中处理过了）
+            const portRange = AstParser.findIdentifierRange(lines, port.name, moduleNode.startPosition.row);
+            if (portRange) {
+                const comment = AstParser.getCommentAbove(lines, portRange.start.line);
+                const sym = new HdlSymbol(
+                    port.name,
+                    'port',
+                    `${port.dir} ${port.type}`.trim(),
+                    portRange,
+                    uri,
+                    comment
+                );
+                hdlModule.symbols.push(sym);
+            }
+        }
+
+        // 2. 遍历 AST 提取 net/reg/data/integer/genvar 声明
+        AstParser.walkNode(moduleNode, (node: any) => {
+            const kind = AstParser.DECL_NODE_TYPES[node.type];
+            if (!kind) return;
+
+            // 提取该声明节点中的所有标识符
+            AstParser.walkNode(node, (child: any) => {
+                // 找到变量名标识符
+                if (child.type === 'simple_identifier' && child.parent?.type !== node.type) {
+                    // 为了避免将类型名当做变量名，检查父节点
+                    const parentType = child.parent?.type || '';
+                    if (
+                        parentType.includes('identifier') ||
+                        parentType.includes('variable') ||
+                        parentType.includes('assignment') ||
+                        parentType === 'list_of_net_decl_assignments' ||
+                        parentType === 'list_of_variable_decl_assignments' ||
+                        parentType === 'net_decl_assignment'
+                    ) {
+                        const name = child.text;
+                        // 跳过已作为端口记录的符号
+                        if (hdlModule.symbols.some(s => s.name === name)) return;
+
+                        const symRange = new vscode.Range(
+                            child.startPosition.row,
+                            child.startPosition.column,
+                            child.endPosition.row,
+                            child.endPosition.column
+                        );
+
+                        // 提取声明行上方的注释
+                        const comment = AstParser.getCommentAbove(lines, child.startPosition.row);
+
+                        // 提取类型描述文本（包含位宽）
+                        const typeTxt = node.text.split(name)[0]?.trim() || kind;
+
+                        const sym = new HdlSymbol(name, kind, typeTxt, symRange, uri, comment);
+                        hdlModule.symbols.push(sym);
+                    }
+                }
+            });
+        });
+
+        // 3. 将参数也加入符号表
+        for (const param of hdlModule.params) {
+            const paramRange = AstParser.findIdentifierRange(lines, param.name, moduleNode.startPosition.row);
+            if (paramRange) {
+                const comment = AstParser.getCommentAbove(lines, paramRange.start.line);
+                const sym = new HdlSymbol(
+                    param.name,
+                    'parameter',
+                    `parameter ${param.name} = ${param.defaultValue}`,
+                    paramRange,
+                    uri,
+                    comment
+                );
+                hdlModule.symbols.push(sym);
+            }
+        }
+    }
+
+    /**
+     * Phase 5.2: 遍历 module 的所有标识符引用，关联到对应的 HdlSymbol
+     */
+    private static extractReferences(moduleNode: any, hdlModule: HdlModule): void {
+        AstParser.walkNode(moduleNode, (node: any) => {
+            // 我们只寻找 simple_identifier 和 port_identifier 节点（即引用点）
+            if (node.type === 'simple_identifier' || node.type === 'port_identifier') {
+                const name = node.text;
+
+                // 排除作为声明的节点 (因为它们不是"引用"，但为了简化 FindAllReferences，加入也无妨)
+                // 这里我们统统加入，让重命名和查找引用能够包含声明自身
+                const sym = hdlModule.symbols.find(s => s.name === name);
+                if (sym) {
+                    const refRange = new vscode.Range(
+                        node.startPosition.row,
+                        node.startPosition.column,
+                        node.endPosition.row,
+                        node.endPosition.column
+                    );
+                    
+                    // 去重：避免有些嵌套结构导致同一个范围被添加两次
+                    if (!sym.references.some(r => r.isEqual(refRange))) {
+                        sym.references.push(refRange);
+                    }
+                }
+            }
+        });
+    }
+
+    /**
+     * 提取指定行上方 1-2 行的注释文本
+     * 支持 // 和 block comment 风格
+     */
+    private static getCommentAbove(lines: string[], lineIndex: number): string | undefined {
+        const comments: string[] = [];
+
+        for (let i = lineIndex - 1; i >= Math.max(0, lineIndex - 2); i--) {
+            const trimmed = lines[i]?.trim() || '';
+            if (trimmed.startsWith('//')) {
+                comments.unshift(trimmed.replace(/^\/\/\s*/, ''));
+            } else if (trimmed.endsWith('*/')) {
+                // 单行 /* ... */
+                const blockMatch = trimmed.match(/\/\*\s*(.*?)\s*\*\//);
+                if (blockMatch) {
+                    comments.unshift(blockMatch[1]);
+                }
+            } else {
+                break; // 非注释行，停止向上搜索
+            }
+        }
+
+        return comments.length > 0 ? comments.join(' ') : undefined;
+    }
+
+    /**
+     * 在文本中简单查找某个标识符的第一次出现位置（从 startRow 开始）
+     */
+    private static findIdentifierRange(
+        lines: string[],
+        name: string,
+        startRow: number
+    ): vscode.Range | null {
+        const regex = new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+        for (let i = startRow; i < lines.length && i < startRow + 200; i++) {
+            const match = regex.exec(lines[i] || '');
+            if (match) {
+                return new vscode.Range(i, match.index, i, match.index + name.length);
+            }
+        }
+        return null;
     }
 }

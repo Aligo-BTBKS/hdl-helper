@@ -11,6 +11,26 @@ export enum HdlModuleType {
 }
 
 /**
+ * 代表模块内部的一个信号/变量符号
+ * 用于信号级 Go to Definition、Find All References、Rename (F2)、Rich Hover
+ */
+export type HdlSymbolKind = 'wire' | 'reg' | 'logic' | 'parameter' | 'localparam' | 'genvar' | 'integer' | 'real' | 'port' | 'unknown';
+
+export class HdlSymbol {
+    /** 该符号在文件中被引用的所有位置（由 AstParser 填充） */
+    public references: vscode.Range[] = [];
+
+    constructor(
+        public name: string,       // 信号名
+        public kind: HdlSymbolKind,// 类型
+        public type: string,       // 位宽/类型描述，如 "wire [31:0]"
+        public range: vscode.Range,// 声明位置
+        public fileUri: vscode.Uri,// 所在文件
+        public comment?: string    // 声明上方 1-2 行的注释 (用于 Rich Hover)
+    ) {}
+}
+
+/**
  * 1. 新增：代表一个参数
  * 例如: parameter DATA_WIDTH = 32
  */
@@ -56,12 +76,14 @@ export class HdlModule {
     public instances: HdlInstance[] = [];
     public ports: HdlPort[] = [];
     public params: HdlParam[] = [];
+    public symbols: HdlSymbol[] = [];   // Phase 5: 模块内部所有信号符号
     public parent: string | null = null;
     
     constructor(
         public name: string,
         public fileUri: vscode.Uri,
-        public range: vscode.Range,
+        public range: vscode.Range,     // The full body range of the block
+        public nameRange?: vscode.Range,// The range of just the identifier
         public type: HdlModuleType = HdlModuleType.Module
     ) {}
 
