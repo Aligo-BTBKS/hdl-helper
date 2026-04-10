@@ -14,6 +14,17 @@ export class ProjectManager {
 
     private outputChannel: vscode.OutputChannel;
 
+    private scanning = false;
+    private lastScanSummary = {
+        workspaceCount: 0,
+        fileCount: 0,
+        moduleCount: 0,
+        lastError: ''
+    };
+
+    private _onDidChangeScanState: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
+    readonly onDidChangeScanState: vscode.Event<void> = this._onDidChangeScanState.event;
+
     constructor(private extensionUri: vscode.Uri, outputChannel: vscode.OutputChannel) {
         this.outputChannel = outputChannel;
         // 监听变动
@@ -62,60 +73,82 @@ export class ProjectManager {
     public async scanWorkspace() {
         if (!vscode.workspace.workspaceFolders) return;
 
+        this.scanning = true;
+        this.lastScanSummary.lastError = '';
+        this._onDidChangeScanState.fire();
+
         this.workspaces.clear();
 
-        for (const folder of vscode.workspace.workspaceFolders) {
-            const ws = this.ensureWorkspace(folder);
-            ws.clear();
-            
-            console.log(`[Step 1] 开始搜索项目索引... (${ws.name})`);
+        let scannedFiles = 0;
 
-            // 获取排除目录配置
-            const config = vscode.workspace.getConfiguration('hdl-helper');
-            const excludeDirs = config.get<string[]>('project.excludeDirs') || ['node_modules', '.srcs', '.sim', 'ip'];
-            const excludePattern = new vscode.RelativePattern(folder, excludeDirs.length > 0 ? `**/{${excludeDirs.join(',')}}/**` : '**/node_modules/**');
+        try {
+            for (const folder of vscode.workspace.workspaceFolders) {
+                const ws = this.ensureWorkspace(folder);
+                ws.clear();
+                
+                console.log(`[Step 1] 开始搜索项目索引... (${ws.name})`);
 
-            // 1. 优先查找 .f 文件
-            const fFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(folder, '**/*.f'), excludePattern);
-            let filesToScan: vscode.Uri[] = [];
+                // 获取排除目录配置
+                const config = vscode.workspace.getConfiguration('hdl-helper');
+                const excludeDirs = config.get<string[]>('project.excludeDirs') || ['node_modules', '.srcs', '.sim', 'ip'];
+                const excludePattern = new vscode.RelativePattern(folder, excludeDirs.length > 0 ? `**/{${excludeDirs.join(',')}}/**` : '**/node_modules/**');
 
-            if (fFiles.length > 0) {
-                console.log(`[Step 1.1] 发现 ${fFiles.length} 个 .f 文件，进入 Filelist 模式。`);
-                const rawPaths = new Set<string>();
+                // 1. 优先查找 .f 文件
+                const fFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(folder, '**/*.f'), excludePattern);
+                let filesToScan: vscode.Uri[] = [];
 
-                for (const fUri of fFiles) {
-                    const parsedPaths = await FilelistParser.parse(fUri.fsPath);
-                    parsedPaths.forEach(p => rawPaths.add(p));
+                if (fFiles.length > 0) {
+                    console.log(`[Step 1.1] 发现 ${fFiles.length} 个 .f 文件，进入 Filelist 模式。`);
+                    const rawPaths = new Set<string>();
+
+                    for (const fUri of fFiles) {
+                        const parsedPaths = await FilelistParser.parse(fUri.fsPath);
+                        parsedPaths.forEach(p => rawPaths.add(p));
+                    }
+
+                    filesToScan = Array.from(rawPaths)
+                        .filter(p => fs.existsSync(p))
+                        .map(p => vscode.Uri.file(p));
+                    
+                    // 扫描 include 目录 (从结构提取)
+                    const headerDirs = await vscode.workspace.findFiles(new vscode.RelativePattern(folder, '**/*.{vh,svh}'), excludePattern);
+                    ws.includeDirs = Array.from(new Set(headerDirs.map(u => path.dirname(u.fsPath))));
+                } else {
+                    console.log(`[Step 1.2] 未发现 .f，全量扫描 (.v, .sv)。`);
+                    const sourceFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(folder, '**/*.{v,sv}'), excludePattern);
+                    const headerFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(folder, '**/*.{vh,svh}'), excludePattern);
+                    
+                    filesToScan = [...sourceFiles, ...headerFiles];
+                    ws.includeDirs = Array.from(new Set(headerFiles.map(u => path.dirname(u.fsPath))));
                 }
 
-                filesToScan = Array.from(rawPaths)
-                    .filter(p => fs.existsSync(p))
-                    .map(p => vscode.Uri.file(p));
-                
-                // 扫描 include 目录 (从结构提取)
-                const headerDirs = await vscode.workspace.findFiles(new vscode.RelativePattern(folder, '**/*.{vh,svh}'), excludePattern);
-                ws.includeDirs = Array.from(new Set(headerDirs.map(u => path.dirname(u.fsPath))));
-            } else {
-                console.log(`[Step 1.2] 未发现 .f，全量扫描 (.v, .sv)。`);
-                const sourceFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(folder, '**/*.{v,sv}'), excludePattern);
-                const headerFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(folder, '**/*.{vh,svh}'), excludePattern);
-                
-                filesToScan = [...sourceFiles, ...headerFiles];
-                ws.includeDirs = Array.from(new Set(headerFiles.map(u => path.dirname(u.fsPath))));
+                console.log(`[Step 2] 收集到 ${filesToScan.length} 源文件，解析模块...`);
+                scannedFiles += filesToScan.length;
+
+                // 分块解析防 OOM
+                const chunkSize = 50;
+                for (let i = 0; i < filesToScan.length; i += chunkSize) {
+                    const chunk = filesToScan.slice(i, i + chunkSize);
+                    await Promise.all(chunk.map(file => this.parseAndCache(file, ws)));
+                }
             }
 
-            console.log(`[Step 2] 收集到 ${filesToScan.length} 源文件，解析模块...`);
-
-            // 分块解析防 OOM
-            const chunkSize = 50;
-            for (let i = 0; i < filesToScan.length; i += chunkSize) {
-                const chunk = filesToScan.slice(i, i + chunkSize);
-                await Promise.all(chunk.map(file => this.parseAndCache(file, ws)));
-            }
+            this.lastScanSummary = {
+                workspaceCount: this.workspaces.size,
+                fileCount: scannedFiles,
+                moduleCount: this.getAllModules().length,
+                lastError: ''
+            };
+        } catch (error: any) {
+            this.lastScanSummary.lastError = `${error}`;
+            this.outputChannel.appendLine(`[ProjectManager] scanWorkspace failed: ${error}`);
+        } finally {
+            this.scanning = false;
+            this._onDidChangeScanState.fire();
+            this.refreshTree();
         }
-        
+
         console.log(`[Step 3] 扫描结束，刷新 UI。`);
-        this.refreshTree();
     }
 
     private async parseAndCache(uri: vscode.Uri, ws?: HdlWorkspace) {
@@ -129,7 +162,23 @@ export class ProjectManager {
             const text = await FileReader.readFile(uri);
 
             let hdlModules = AstParser.ready ? AstParser.parse(text, uri) : [];
-            if (hdlModules.length === 0) hdlModules = FastParser.parse(text, uri);
+            
+            // 补充修复: 如果 Tree-sitter 因为头部语法稍微不标准 (如 import 包) 导致未能提取到端口/参数
+            // 使用增强版 FastParser 提取出的结果进行补充，同时保留 AstParser 提取的内部 symbols
+            const fastModules = FastParser.parse(text, uri);
+            if (hdlModules.length === 0) {
+                hdlModules = fastModules;
+            } else {
+                for (const hm of hdlModules) {
+                    if (hm.ports.length === 0 && hm.params.length === 0) {
+                        const fm = fastModules.find(f => f.name === hm.name);
+                        if (fm && (fm.ports.length > 0 || fm.params.length > 0)) {
+                            hm.ports = fm.ports;
+                            hm.params = fm.params;
+                        }
+                    }
+                }
+            }
 
             if (hdlModules.length > 0) {
                 const modNames: string[] = [];
@@ -207,6 +256,14 @@ export class ProjectManager {
         return Array.from(new Set(all));
     }
 
+    public isScanning(): boolean {
+        return this.scanning;
+    }
+
+    public getLastScanSummary(): { workspaceCount: number; fileCount: number; moduleCount: number; lastError: string } {
+        return this.lastScanSummary;
+    }
+
     // --- UI State (Top Module) ---
 
     public setTopModule(moduleName: string) {
@@ -265,4 +322,4 @@ export class ProjectManager {
     public refreshTree() {
         this._onDidChangeTreeData.fire();
     }
-}
+}

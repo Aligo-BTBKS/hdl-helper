@@ -26,11 +26,10 @@ export async function runVeribleFormat(
         }
 
         // 2. 基础检查
-        if (!fs.existsSync(binPath)) {
-            // 只有配置了路径但找不到文件时才报错，避免小白用户刚安装就报错
-            if (path.isAbsolute(binPath)) {
-                vscode.window.showErrorMessage(`HDL Helper: 找不到格式化工具 ${binPath}`);
-            }
+        // 仅在“显式路径”模式下做文件存在检查；如果只是命令名则交给系统 PATH 查找。
+        const looksLikeExplicitPath = path.isAbsolute(binPath) || binPath.includes('/') || binPath.includes('\\');
+        if (looksLikeExplicitPath && !fs.existsSync(binPath)) {
+            vscode.window.showErrorMessage(`HDL Helper: 找不到格式化工具 ${binPath}`);
             return resolve([]);
         }
 

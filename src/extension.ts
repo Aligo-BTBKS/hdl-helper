@@ -50,6 +50,28 @@ export function activate(context: vscode.ExtensionContext) {
     projectManager.initAstParser();
     projectManager.scanWorkspace(); // 启动后台扫描
 
+    const scanStatusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 10);
+    scanStatusItem.command = 'hdl-helper.refreshProject';
+    const updateScanStatus = () => {
+        if (projectManager.isScanning()) {
+            scanStatusItem.text = '$(sync~spin) HDL scanning...';
+            scanStatusItem.tooltip = 'HDL Helper is scanning workspace files';
+        } else {
+            const summary = projectManager.getLastScanSummary();
+            if (summary.moduleCount > 0) {
+                scanStatusItem.text = `$(symbol-class) HDL ${summary.moduleCount} modules`;
+                scanStatusItem.tooltip = `Scanned ${summary.fileCount} file(s). Click to rescan.`;
+            } else {
+                scanStatusItem.text = '$(warning) HDL no modules';
+                scanStatusItem.tooltip = 'No HDL modules found. Click to rescan project.';
+            }
+        }
+        scanStatusItem.show();
+    };
+    context.subscriptions.push(scanStatusItem);
+    context.subscriptions.push(projectManager.onDidChangeScanState(() => updateScanStatus()));
+    updateScanStatus();
+
     // B. 启动多引擎 Linter，传入 projectManager（供 Verilator 注入 Include 路径）
     const lintManager = new LintManager(projectManager);
     lintManager.activate(context.subscriptions);
@@ -71,6 +93,62 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.refreshIpExplorer', () => {
         ipCatalogProvider.refresh();
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.quickStart', async () => {
+        const action = await vscode.window.showQuickPick([
+            {
+                label: 'Instantiate Module',
+                description: 'Insert instantiation template from project modules',
+                detail: 'Core workflow'
+            },
+            {
+                label: 'Create Signal Declarations',
+                description: 'Generate signal declarations from selected instance',
+                detail: 'Core workflow'
+            },
+            {
+                label: 'Format Current File',
+                description: 'Run Verible formatter on active HDL document',
+                detail: 'Core workflow'
+            },
+            {
+                label: 'Rescan Project',
+                description: 'Rebuild module index for explorer and completion',
+                detail: 'Core workflow'
+            },
+            {
+                label: 'Open HDL Helper Settings',
+                description: 'Open extension settings (linter/formatter/project)',
+                detail: 'Configuration'
+            },
+        ], {
+            placeHolder: 'HDL Helper Quick Actions'
+        });
+
+        if (!action) {
+            return;
+        }
+
+        if (action.label === 'Instantiate Module') {
+            await vscode.commands.executeCommand('hdl-helper.instantiate');
+            return;
+        }
+        if (action.label === 'Create Signal Declarations') {
+            await vscode.commands.executeCommand('hdl-helper.createSignals');
+            return;
+        }
+        if (action.label === 'Format Current File') {
+            await vscode.commands.executeCommand('editor.action.formatDocument');
+            return;
+        }
+        if (action.label === 'Rescan Project') {
+            await vscode.commands.executeCommand('hdl-helper.refreshProject');
+            return;
+        }
+        if (action.label === 'Open HDL Helper Settings') {
+            await vscode.commands.executeCommand('workbench.action.openSettings', 'hdl-helper');
+        }
     }));
 
     // =========================================================================
@@ -105,7 +183,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // --- B. 智能例化 (Ctrl+Alt+I) ---
     const instCmd = vscode.commands.registerCommand('hdl-helper.instantiate', async () => {
-        try { await instantiateModule(); } catch (e) { vscode.window.showErrorMessage(`${e}`); }
+        try { await instantiateModule(projectManager); } catch (e) { vscode.window.showErrorMessage(`${e}`); }
     });
     context.subscriptions.push(instCmd);
 
@@ -158,8 +236,8 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showInformationMessage(`已清除 Top Module 设置`);
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.refreshProject', () => {
-        projectManager.scanWorkspace();
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.refreshProject', async () => {
+        await projectManager.scanWorkspace();
         treeProvider.refresh();
     }));
 

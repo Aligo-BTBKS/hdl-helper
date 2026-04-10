@@ -6,7 +6,17 @@ import * as path from 'path';
 /**
  * 树节点类型：可能是“模块定义”或者“实例化引用”
  */
-type HdlItem = HdlModule | HdlInstance;
+type HdlItem = HdlModule | HdlInstance | HdlInfoItem;
+
+class HdlInfoItem extends vscode.TreeItem {
+    constructor(label: string, description: string, icon: string, command?: vscode.Command) {
+        super(label, vscode.TreeItemCollapsibleState.None);
+        this.description = description;
+        this.iconPath = new vscode.ThemeIcon(icon);
+        this.contextValue = 'info';
+        this.command = command;
+    }
+}
 
 export class HdlTreeProvider implements vscode.TreeDataProvider<HdlItem> {
     // 事件发射器：当数据变化时，通知 VS Code 刷新 UI
@@ -38,6 +48,10 @@ export class HdlTreeProvider implements vscode.TreeDataProvider<HdlItem> {
      * 获取单个节点的 UI 信息
      */
     getTreeItem(element: HdlItem): vscode.TreeItem {
+        if (element instanceof HdlInfoItem) {
+            return element;
+        }
+
         if (element instanceof HdlModule) {
             // ---> 情况 A: 这是一个模块定义 (Module)
             // 无论是根节点还是子节点，它都默认是“可折叠的”
@@ -88,13 +102,53 @@ export class HdlTreeProvider implements vscode.TreeDataProvider<HdlItem> {
     getChildren(element?: HdlItem): vscode.ProviderResult<HdlItem[]> {
         // 1. 根节点 (Root)
         if (!element) {
+            if (this.projectManager.isScanning()) {
+                return [
+                    new HdlInfoItem(
+                        'Scanning HDL files...',
+                        'Project index is being built',
+                        'sync~spin'
+                    )
+                ];
+            }
+
             // 如果用户设置了 Top，只显示那个 Top
             if (this.topModuleName) {
                 const top = this.projectManager.getModule(this.topModuleName);
                 return top ? [top] : [];
             }
             // 没设置 Top，显示所有模块
-            return this.projectManager.getAllModules();
+            const allModules = this.projectManager.getAllModules();
+            if (allModules.length > 0) {
+                return allModules;
+            }
+
+            const summary = this.projectManager.getLastScanSummary();
+            if (summary.lastError) {
+                return [
+                    new HdlInfoItem(
+                        'Project scan failed',
+                        'Click to rescan project',
+                        'error',
+                        {
+                            command: 'hdl-helper.refreshProject',
+                            title: 'Rescan Project'
+                        }
+                    )
+                ];
+            }
+
+            return [
+                new HdlInfoItem(
+                    'No modules found',
+                    'Open a .v/.sv file and click to rescan',
+                    'info',
+                    {
+                        command: 'hdl-helper.refreshProject',
+                        title: 'Rescan Project'
+                    }
+                )
+            ];
         } 
         
         // 2. 如果当前节点是“模块定义” (Module) -> 返回它内部的实例化
@@ -114,6 +168,10 @@ export class HdlTreeProvider implements vscode.TreeDataProvider<HdlItem> {
             } else {
                 return []; // 没找到定义 (比如标准库原语)，到底了
             }
+        }
+
+        if (element instanceof HdlInfoItem) {
+            return [];
         }
         
         return [];
