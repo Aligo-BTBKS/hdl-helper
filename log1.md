@@ -232,3 +232,86 @@
   - npm run -s compile: 通过。
   - npm run -s lint: 通过。
   - npm -s test: 通过（13 passing）。
+
+## 2026-04-11 - Iteration 3 Day 1: Project Config Bootstrap Kickoff
+
+- 目标: 按迭代计划启动 Iteration 3，落地 `project.json` 引导式初始化能力。
+- 变更文件:
+  - src/commands/createProjectConfig.ts
+  - src/extension.ts
+  - package.json
+  - src/test/extension.test.ts
+  - log1.md
+- 关键变更:
+  - 新增命令 `HDL: Create Project Config`，用于在工作区生成 `.hdl-helper/project.json` 最小模板并打开编辑。
+  - 新增可测试 helper：
+    - `inferDefaultTops(modules)`：从模块列表推断 design/simulation top（无 testbench 时对 simulation 做平滑回退）。
+    - `buildProjectConfigTemplate(workspaceRoot, modules, workspaceName)`：构建包含 schemaVersion、name、top、files 等必需字段的最小配置。
+  - 在 extension 中接入命令注册，并加入 Quick Actions 与 `HDL: Open Hierarchy Tools` 入口。
+  - 在 `package.json` 增加命令贡献，确保 Command Palette 可发现。
+  - 新增最小回归测试：
+    - `Project config template builder creates required minimal schema fields`
+    - `Project config top inference falls back gracefully when no testbench exists`
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（15 passing）。
+
+## 2026-04-11 - Iteration 3 Day 2: Active Target Context Diagnostics
+
+- 目标: 补齐 Iteration 3 的可观测性链路，新增 active target context 诊断输出并验证配置回退路径。
+- 变更文件:
+  - src/commands/debugActiveTargetContext.ts
+  - src/extension.ts
+  - package.json
+  - src/test/extension.test.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - 新增命令 `HDL: Debug Active Target Context`，输出以下关键信息：
+    - projectConfig 开关与状态（not_enabled/missing/invalid/valid）
+    - activeTarget 与 fallback target
+    - 解析后的 `TargetContext` 快照
+    - 关键问题列表（配置缺失/无效、activeTarget 无效、target 无 top 等）
+  - 新增可测试 helper：
+    - `buildTargetContextDebugSnapshot(...)`：统一构建诊断快照，便于命令与测试复用。
+  - 命令接入入口：
+    - Command Palette（命令贡献）
+    - `HDL: Quick Actions` 诊断项
+    - `HDL: Open Hierarchy Tools` 诊断项
+  - 设置指南补充新诊断命令入口说明。
+  - 新增最小回归测试：
+    - `Active target context debug snapshot reports heuristic mode when project config is disabled`
+    - `Active target context debug snapshot resolves config-driven active target`
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（17 passing）。
+
+## 2026-04-11 - Iteration 3 Day 3: Config Issues Section in Explorer
+
+- 目标: 继续推进 Iteration 3，将 project config 相关问题直接暴露到 Explorer 的 Diagnostics section。
+- 变更文件:
+  - src/project/configDiagnostics.ts
+  - src/project/projectConfigService.ts
+  - src/project/hdlTreeProvider.ts
+  - src/test/extension.test.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - 新增 `configDiagnostics` 纯函数模块：
+    - `buildConfigIssues(...)` 统一汇总配置问题（missing/invalid/warnings/unresolved top）。
+  - `ProjectConfigService` 增加 issue 缓存与读取接口：
+    - `getIssues()` 返回上次 load 的 errors/warnings，供 UI 复用。
+  - `HdlTreeProvider` 新增 `Diagnostics` 根节点（在 `projectConfig.enabled=true` 时显示）：
+    - 按工作区输出 config 诊断项。
+    - 缺失 `.hdl-helper/project.json` 时提供 `Create Project Config` 快捷动作。
+    - 无问题时显示 clean 提示。
+  - 新增最小回归测试：
+    - `Config diagnostics builder reports missing project config in enabled mode`
+    - `Config diagnostics builder reports unresolved top for simulation target`
+  - 设置指南补充 `projectConfig.enabled` 与 Diagnostics section 的联动说明。
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（19 passing）。

@@ -47,6 +47,12 @@
         "category": "HDL Helper"
       },
       {
+        "command": "hdl-helper.debugActiveTargetContext",
+        "title": "HDL: Debug Active Target Context",
+        "category": "HDL Helper",
+        "icon": "$(inspect)"
+      },
+      {
         "command": "hdl-helper.debugDualHierarchyState",
         "title": "HDL: Debug Dual Hierarchy State",
         "category": "HDL Helper",
@@ -192,6 +198,12 @@
         "title": "HDL: Reveal Source File In Explorer",
         "category": "HDL Helper",
         "icon": "$(folder-opened)"
+      },
+      {
+        "command": "hdl-helper.createProjectConfig",
+        "title": "HDL: Create Project Config",
+        "category": "HDL Helper",
+        "icon": "$(new-file)"
       }
     ],
     "configuration": {

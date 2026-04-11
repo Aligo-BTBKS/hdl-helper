@@ -83,6 +83,7 @@ export class ProjectConfigService {
     private configPath: string;
     private cachedConfig?: NormalizedProjectConfig;
     private cachedStatus: ProjectConfigStatus = ProjectConfigStatus.NotEnabled;
+    private cachedIssues: { errors: string[]; warnings: string[] } = { errors: [], warnings: [] };
 
     constructor(workspaceRoot: string) {
         this.workspaceRoot = workspaceRoot;
@@ -120,6 +121,7 @@ export class ProjectConfigService {
         if (!this.configExists()) {
             this.cachedStatus = ProjectConfigStatus.Missing;
             this.cachedConfig = undefined;
+            this.cachedIssues = { errors: [], warnings: [] };
             this.clearDiagnostics();
             return undefined;
         }
@@ -136,6 +138,10 @@ export class ProjectConfigService {
             if (!validation.valid) {
                 this.cachedStatus = ProjectConfigStatus.Invalid;
                 this.cachedConfig = undefined;
+                this.cachedIssues = {
+                    errors: [...validation.errors],
+                    warnings: [...validation.warnings]
+                };
                 this.publishDiagnostics(validation.errors, validation.warnings);
                 return undefined;
             }
@@ -144,6 +150,10 @@ export class ProjectConfigService {
             const normalized = this.normalizeConfig(raw);
             this.cachedConfig = normalized;
             this.cachedStatus = ProjectConfigStatus.Valid;
+            this.cachedIssues = {
+                errors: [],
+                warnings: [...validation.warnings]
+            };
             this.publishDiagnostics([], validation.warnings);
             
             return normalized;
@@ -152,6 +162,10 @@ export class ProjectConfigService {
             this.cachedStatus = ProjectConfigStatus.Invalid;
             this.cachedConfig = undefined;
             const message = error instanceof Error ? error.message : String(error);
+            this.cachedIssues = {
+                errors: [`Failed to parse .hdl-helper/project.json: ${message}`],
+                warnings: []
+            };
             this.publishDiagnostics([`Failed to parse .hdl-helper/project.json: ${message}`]);
             return undefined;
         }
@@ -162,6 +176,16 @@ export class ProjectConfigService {
      */
     public getCachedConfig(): NormalizedProjectConfig | undefined {
         return this.cachedConfig;
+    }
+
+    /**
+     * Get cached validation/parse issues from last load operation.
+     */
+    public getIssues(): { errors: string[]; warnings: string[] } {
+        return {
+            errors: [...this.cachedIssues.errors],
+            warnings: [...this.cachedIssues.warnings]
+        };
     }
 
     /**
@@ -247,6 +271,7 @@ export class ProjectConfigService {
     public clearCache(): void {
         this.cachedConfig = undefined;
         this.cachedStatus = ProjectConfigStatus.NotEnabled;
+        this.cachedIssues = { errors: [], warnings: [] };
     }
 
     /**

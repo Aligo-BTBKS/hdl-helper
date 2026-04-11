@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ProjectManager } from './projectManager';
 import { HdlModule, HdlInstance } from './hdlSymbol';
 import * as path from 'path';
+import { buildConfigIssues } from './configDiagnostics';
 import { ClassificationService } from './classificationService';
 import { ProjectConfigService } from './projectConfigService';
 import { ExplorerViewModelBuilder } from './explorerViewModelBuilder';
@@ -163,6 +164,14 @@ class SimulationHierarchyRootItem extends vscode.TreeItem {
     }
 }
 
+class DiagnosticsRootItem extends vscode.TreeItem {
+    constructor() {
+        super('Diagnostics', vscode.TreeItemCollapsibleState.Expanded);
+        this.iconPath = new vscode.ThemeIcon('warning');
+        this.contextValue = 'diagnostics-root';
+    }
+}
+
 type HierarchyKind = 'design' | 'simulation';
 
 class ScopedModuleItem {
@@ -190,7 +199,8 @@ type HdlTreeItem =
     | SourceFileItem
     | LegacyHierarchyRootItem
     | DesignHierarchyRootItem
-    | SimulationHierarchyRootItem;
+    | SimulationHierarchyRootItem
+    | DiagnosticsRootItem;
 
 export class HdlTreeProvider implements vscode.TreeDataProvider<HdlTreeItem> {
     // 事件发射器：当数据变化时，通知 VS Code 刷新 UI
@@ -279,6 +289,10 @@ export class HdlTreeProvider implements vscode.TreeDataProvider<HdlTreeItem> {
             return element;
         }
 
+        if (element instanceof DiagnosticsRootItem) {
+            return element;
+        }
+
         if (element instanceof ScopedModuleItem) {
             return this.createModuleTreeItem(element.module);
         }
@@ -322,6 +336,9 @@ export class HdlTreeProvider implements vscode.TreeDataProvider<HdlTreeItem> {
                 if (this.isDualHierarchyEnabled()) {
                     roots.push(new DesignHierarchyRootItem(), new SimulationHierarchyRootItem());
                 }
+                if (this.isProjectConfigDiagnosticsEnabled()) {
+                    roots.push(new DiagnosticsRootItem());
+                }
                 if (this.isLegacyHierarchyVisibleWithSources()) {
                     roots.push(new LegacyHierarchyRootItem());
                 }
@@ -354,6 +371,10 @@ export class HdlTreeProvider implements vscode.TreeDataProvider<HdlTreeItem> {
 
         if (element instanceof SimulationHierarchyRootItem) {
             return this.getScopedHierarchyChildren('simulation');
+        }
+
+        if (element instanceof DiagnosticsRootItem) {
+            return this.getDiagnosticsChildren();
         }
 
         if (element instanceof ScopedModuleItem) {
@@ -416,6 +437,70 @@ export class HdlTreeProvider implements vscode.TreeDataProvider<HdlTreeItem> {
             .get<boolean>('workbench.dualHierarchy', false);
 
         return this.isRoleGroupedSourcesEnabled() && dualHierarchy;
+    }
+
+    private isProjectConfigDiagnosticsEnabled(): boolean {
+        const folders = vscode.workspace.workspaceFolders;
+        if (!folders || folders.length === 0) {
+            return false;
+        }
+
+        return folders.some(folder => vscode.workspace
+            .getConfiguration('hdl-helper', folder.uri)
+            .get<boolean>('projectConfig.enabled', false));
+    }
+
+    private async getDiagnosticsChildren(): Promise<HdlTreeItem[]> {
+        const folders = vscode.workspace.workspaceFolders;
+        if (!folders || folders.length === 0) {
+            return [new HdlInfoItem('No workspace folder open', 'Open a workspace to inspect diagnostics', 'info')];
+        }
+
+        const items: HdlTreeItem[] = [];
+        for (const folder of folders) {
+            const configEnabled = vscode.workspace
+                .getConfiguration('hdl-helper', folder.uri)
+                .get<boolean>('projectConfig.enabled', false);
+
+            if (!configEnabled) {
+                continue;
+            }
+
+            const configService = new ProjectConfigService(folder.uri.fsPath);
+            const config = await configService.loadConfig();
+            const status = configService.getStatus();
+            const issues = configService.getIssues();
+            const entries = buildConfigIssues({
+                configEnabled,
+                status,
+                config,
+                errors: issues.errors,
+                warnings: issues.warnings
+            });
+
+            for (const entry of entries) {
+                const icon = entry.severity === 'error'
+                    ? 'error'
+                    : entry.severity === 'warning'
+                        ? 'warning'
+                        : 'info';
+                const command = entry.message.includes('.hdl-helper/project.json is missing')
+                    ? {
+                        command: 'hdl-helper.createProjectConfig',
+                        title: 'Create Project Config'
+                    }
+                    : undefined;
+                items.push(new HdlInfoItem(`[${folder.name}] ${entry.message}`, `config:${status}`, icon, command));
+            }
+
+            configService.dispose();
+        }
+
+        if (items.length > 0) {
+            return items;
+        }
+
+        return [new HdlInfoItem('No config issues detected', 'project config diagnostics are clean', 'pass')];
     }
 
     private getLegacyRootChildren(): HdlTreeItem[] {

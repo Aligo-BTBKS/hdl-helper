@@ -13,8 +13,10 @@ import { generateAxiCommand } from './commands/generateAxi';
 import { generateMemoryCommand } from './commands/generateMemory';
 import { generateRegistersCommand } from './commands/generateRegisters';
 import { debugProjectClassification } from './commands/debugProjectClassification';
+import { debugActiveTargetContext } from './commands/debugActiveTargetContext';
 import { debugDualHierarchyState } from './commands/debugDualHierarchyState';
 import { openDualHierarchyRegressionChecklist } from './commands/openDualHierarchyRegressionChecklist';
+import { createProjectConfig } from './commands/createProjectConfig';
 import { activateLanguageServer, deactivateLanguageServer } from './languageClient';
 // 引入 V2.0 工程核心
 import { ProjectManager } from './project/projectManager';
@@ -264,9 +266,19 @@ export function activate(context: vscode.ExtensionContext) {
                 detail: 'Diagnostics'
             },
             {
+                label: 'Debug Active Target Context',
+                description: 'Print active target resolution and fallback diagnostics',
+                detail: 'Diagnostics'
+            },
+            {
                 label: 'Open Dual Hierarchy Regression Checklist',
                 description: 'Open resources/regression/DUAL_HIERARCHY_MANUAL_REGRESSION.md',
                 detail: 'Diagnostics'
+            },
+            {
+                label: 'Create Project Config',
+                description: 'Generate .hdl-helper/project.json template from workspace',
+                detail: 'Configuration'
             },
         ], {
             placeHolder: 'HDL Helper Quick Actions'
@@ -312,8 +324,16 @@ export function activate(context: vscode.ExtensionContext) {
             await vscode.commands.executeCommand('hdl-helper.debugDualHierarchyState');
             return;
         }
+        if (action.label === 'Debug Active Target Context') {
+            await vscode.commands.executeCommand('hdl-helper.debugActiveTargetContext');
+            return;
+        }
         if (action.label === 'Open Dual Hierarchy Regression Checklist') {
             await vscode.commands.executeCommand('hdl-helper.openDualHierarchyRegressionChecklist');
+            return;
+        }
+        if (action.label === 'Create Project Config') {
+            await vscode.commands.executeCommand('hdl-helper.createProjectConfig');
         }
     }));
 
@@ -340,6 +360,11 @@ export function activate(context: vscode.ExtensionContext) {
                 command: 'hdl-helper.debugDualHierarchyState'
             },
             {
+                label: '[Diagnostics] Debug Active Target Context',
+                description: 'Print active target context and fallback path',
+                command: 'hdl-helper.debugActiveTargetContext'
+            },
+            {
                 label: '[Diagnostics] Dual Hierarchy Regression Checklist',
                 description: 'Open manual regression checklist',
                 command: 'hdl-helper.openDualHierarchyRegressionChecklist'
@@ -348,6 +373,11 @@ export function activate(context: vscode.ExtensionContext) {
                 label: '[Action] Clear Top Module',
                 description: 'Clear design/simulation/legacy top selection',
                 command: 'hdl-helper.clearTopModule'
+            },
+            {
+                label: '[Action] Create Project Config',
+                description: 'Generate .hdl-helper/project.json template',
+                command: 'hdl-helper.createProjectConfig'
             }
         ], {
             placeHolder: 'Hierarchy Tools (Settings / Diagnostics / Action)'
@@ -645,6 +675,10 @@ export function activate(context: vscode.ExtensionContext) {
         });
     }));
 
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.createProjectConfig', async () => {
+        await createProjectConfig(projectManager);
+    }));
+
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.runSimulation', async (moduleName: string, sourceUri?: vscode.Uri) => {
         if (!moduleName || typeof moduleName !== 'string') {
             vscode.window.showErrorMessage('No module selected for simulation.');
@@ -789,6 +823,13 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.debugProjectClassification', async () => {
         await debugProjectClassification(classificationOutputChannel);
+    }));
+
+    const targetContextOutputChannel = vscode.window.createOutputChannel('HDL Helper - Target Context');
+    context.subscriptions.push(targetContextOutputChannel);
+
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.debugActiveTargetContext', async () => {
+        await debugActiveTargetContext(targetContextOutputChannel, stateService);
     }));
 
     const dualHierarchyOutputChannel = vscode.window.createOutputChannel('HDL Helper - Dual Hierarchy');

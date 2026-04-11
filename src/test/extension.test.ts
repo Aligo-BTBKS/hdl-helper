@@ -8,7 +8,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { FilelistParser } from '../project/filelistParser';
 import { ClassificationService } from '../project/classificationService';
-import { Role } from '../project/types';
+import { ProjectConfigStatus, Role, TargetKind } from '../project/types';
 import { HdlTreeProvider } from '../project/hdlTreeProvider';
 import { HdlInstance, HdlModule, HdlPort } from '../project/hdlSymbol';
 import { mapLegacyTopSelection } from '../project/topSelectionPolicy';
@@ -16,6 +16,12 @@ import {
 	getDualHierarchyChecklistPath,
 	openDualHierarchyRegressionChecklist
 } from '../commands/openDualHierarchyRegressionChecklist';
+import {
+	buildProjectConfigTemplate,
+	inferDefaultTops
+} from '../commands/createProjectConfig';
+import { buildTargetContextDebugSnapshot } from '../commands/debugActiveTargetContext';
+import { buildConfigIssues } from '../project/configDiagnostics';
 // import * as myExtension from '../../extension';
 
 suite('Extension Test Suite', () => {
@@ -268,5 +274,121 @@ suite('Extension Test Suite', () => {
 	test('Dual hierarchy checklist path helper returns undefined without workspace root', () => {
 		assert.strictEqual(getDualHierarchyChecklistPath(undefined), undefined);
 		assert.ok((getDualHierarchyChecklistPath('C:/repo') || '').endsWith('DUAL_HIERARCHY_MANUAL_REGRESSION.md'));
+	});
+
+	test('Project config template builder creates required minimal schema fields', () => {
+		const dut = createModule('dut_cfg', 'dut_cfg.sv');
+		const tb = createModule('tb_cfg', 'tb_cfg.sv', true);
+		const template = buildProjectConfigTemplate('C:/repo', [dut, tb], 'repo');
+
+		assert.strictEqual(template.version, '1.0');
+		assert.strictEqual(template.name, 'repo');
+		assert.ok(template.sourceSets.design.includes.length > 0);
+		assert.ok(template.targets.design_default.sourceSets.includes('design'));
+		assert.ok(template.targets.sim_default.sourceSets.includes('simulation'));
+		assert.ok(template.tops.design);
+		assert.ok(template.tops.simulation);
+	});
+
+	test('Project config top inference falls back gracefully when no testbench exists', () => {
+		const dutOnly = createModule('dut_only', 'dut_only.sv');
+		const tops = inferDefaultTops([dutOnly]);
+		assert.strictEqual(tops.design, 'dut_only');
+		assert.strictEqual(tops.simulation, undefined);
+	});
+
+	test('Active target context debug snapshot reports heuristic mode when project config is disabled', () => {
+		const snapshot = buildTargetContextDebugSnapshot({
+			workspaceName: 'repo',
+			workspaceRoot: 'C:/repo',
+			configEnabled: false,
+			configStatus: ProjectConfigStatus.NotEnabled,
+			designTop: 'dut_top'
+		});
+
+		assert.strictEqual(snapshot.configEnabled, false);
+		assert.strictEqual(snapshot.context?.targetId, 'heuristic-fallback');
+		assert.ok(snapshot.issues.some(issue => issue.includes('heuristic compatibility mode')));
+	});
+
+	test('Active target context debug snapshot resolves config-driven active target', () => {
+		const snapshot = buildTargetContextDebugSnapshot({
+			workspaceName: 'repo',
+			workspaceRoot: 'C:/repo',
+			configEnabled: true,
+			configStatus: ProjectConfigStatus.Valid,
+			projectConfig: {
+				version: '1.0',
+				name: 'repo',
+				root: 'C:/repo',
+				sourceSets: {
+					design: {
+						name: 'design',
+						role: Role.Design,
+						includes: ['rtl/**/*.sv']
+					}
+				},
+				tops: {
+					design: 'dut_top',
+					simulation: 'tb_top'
+				},
+				targets: {
+					sim_default: {
+						id: 'sim_default',
+						kind: TargetKind.Simulation,
+						top: 'tb_top',
+						sourceSets: ['design']
+					}
+				},
+				activeTarget: 'sim_default'
+			}
+		});
+
+		assert.strictEqual(snapshot.context?.targetId, 'sim_default');
+		assert.strictEqual(snapshot.context?.top, 'tb_top');
+		assert.strictEqual(snapshot.issues.some(issue => issue.includes('invalid')), false);
+	});
+
+	test('Config diagnostics builder reports missing project config in enabled mode', () => {
+		const issues = buildConfigIssues({
+			configEnabled: true,
+			status: ProjectConfigStatus.Missing
+		});
+
+		assert.ok(issues.some(issue => issue.severity === 'warning'));
+		assert.ok(issues.some(issue => issue.message.includes('project.json is missing')));
+	});
+
+	test('Config diagnostics builder reports unresolved top for simulation target', () => {
+		const issues = buildConfigIssues({
+			configEnabled: true,
+			status: ProjectConfigStatus.Valid,
+			config: {
+				version: '1.0',
+				name: 'repo',
+				root: 'C:/repo',
+				sourceSets: {
+					design: {
+						name: 'design',
+						role: Role.Design,
+						includes: ['rtl/**/*.sv']
+					}
+				},
+				tops: {
+					design: 'dut_top',
+					simulation: undefined
+				},
+				targets: {
+					sim_default: {
+						id: 'sim_default',
+						kind: TargetKind.Simulation,
+						sourceSets: ['design']
+					}
+				},
+				activeTarget: 'sim_default'
+			}
+		});
+
+		assert.ok(issues.some(issue => issue.message.includes("Target 'sim_default' has no resolved top.")));
 	});
 });
