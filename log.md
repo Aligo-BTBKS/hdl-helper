@@ -743,3 +743,22 @@
   - npm -s test: 通过（3 passing）。
 - 结论:
   - Day 4 回归清单闭环完成，可进入统一提交整理。
+## 2026-04-11 - Iteration 1 Day 4: Settings Discoverability Follow-up
+
+- 目标: 强化“设置开放给用户”的可发现性，降低配置门槛。
+- 变更文件:
+  - package.json
+  - src/extension.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log.md
+- 关键变更:
+  - 新增命令 `HDL: Open Workbench Settings`，可直达 `hdl-helper.workbench` 设置页。
+  - Quick Actions 增加 `Open Workbench Settings` 入口。
+  - 视图标题菜单新增 Workbench Settings 快捷入口。
+  - 设置指南文档补充命令方式入口。
+- 验证:
+  - npm run -s compile: 通过。
+  - npm run -s lint: 通过。
+  - npm -s test: 通过（3 passing）。
+- 结论:
+  - Workbench 设置项不仅可配，而且可被快速发现和使用。

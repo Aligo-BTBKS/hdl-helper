@@ -140,6 +140,12 @@
         "title": "HDL: Open Simulation Settings",
         "category": "HDL Helper",
         "icon": "$(gear)"
+      },
+      {
+        "command": "hdl-helper.openWorkbenchSettings",
+        "title": "HDL: Open Workbench Settings",
+        "category": "HDL Helper",
+        "icon": "$(settings-gear)"
       }
     ],
     "configuration": {
@@ -502,9 +508,14 @@
           "group": "navigation@2"
         },
         {
-          "command": "hdl-helper.openSimulationSettings",
+          "command": "hdl-helper.openWorkbenchSettings",
           "when": "view == hdl-hierarchy-view",
           "group": "navigation@3"
+        },
+        {
+          "command": "hdl-helper.openSimulationSettings",
+          "when": "view == hdl-hierarchy-view",
+          "group": "navigation@4"
         },
         {
           "command": "hdl-helper.refreshIpExplorer",

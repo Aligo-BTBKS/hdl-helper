@@ -214,6 +214,11 @@ export function activate(context: vscode.ExtensionContext) {
                 description: 'Configure simulator path, build dir, and task file',
                 detail: 'Configuration'
             },
+            {
+                label: 'Open Workbench Settings',
+                description: 'Configure explorer grouping, source scan filters, and fallback behavior',
+                detail: 'Configuration'
+            },
         ], {
             placeHolder: 'HDL Helper Quick Actions'
         });
@@ -244,6 +249,10 @@ export function activate(context: vscode.ExtensionContext) {
         }
         if (action.label === 'Open Simulation Settings') {
             await vscode.commands.executeCommand('hdl-helper.openSimulationSettings');
+            return;
+        }
+        if (action.label === 'Open Workbench Settings') {
+            await vscode.commands.executeCommand('hdl-helper.openWorkbenchSettings');
         }
     }));
 
@@ -438,6 +447,10 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.openSimulationSettings', async () => {
         await vscode.commands.executeCommand('workbench.action.openSettings', 'hdl-helper.simulation');
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.openWorkbenchSettings', async () => {
+        await vscode.commands.executeCommand('workbench.action.openSettings', 'hdl-helper.workbench');
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.runSimulation', async (moduleName: string, sourceUri?: vscode.Uri) => {

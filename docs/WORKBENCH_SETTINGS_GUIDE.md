@@ -12,6 +12,9 @@ This guide lists workbench-related settings that can be configured directly in V
 2. Search keyword: `HDL Helper`
 3. Adjust settings under `HDL Helper` section
 
+You can also run extension command:
+- `HDL: Open Workbench Settings`
+
 ## Core Workbench Toggles
 
 - `hdl-helper.workbench.roleGroupedSources`
