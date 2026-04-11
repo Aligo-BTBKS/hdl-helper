@@ -7,6 +7,7 @@ import { ClassificationService } from './classificationService';
 import { ProjectConfigService } from './projectConfigService';
 import { ExplorerViewModelBuilder } from './explorerViewModelBuilder';
 import { HierarchyService } from './hierarchyService';
+import { TargetContextService } from './targetContextService';
 import {
     FileClassificationResult,
     Role,
@@ -484,13 +485,52 @@ export class HdlTreeProvider implements vscode.TreeDataProvider<HdlTreeItem> {
                     : entry.severity === 'warning'
                         ? 'warning'
                         : 'info';
-                const command = entry.message.includes('.hdl-helper/project.json is missing')
-                    ? {
-                        command: 'hdl-helper.createProjectConfig',
-                        title: 'Create Project Config'
-                    }
-                    : undefined;
+                const command = {
+                    command: 'hdl-helper.openProjectConfig',
+                    title: 'Open Project Config'
+                };
                 items.push(new HdlInfoItem(`[${folder.name}] ${entry.message}`, `config:${status}`, icon, command));
+            }
+
+            const targetContextService = new TargetContextService(folder.uri.fsPath, {
+                projectConfig: config,
+                designTop: this.designTopModuleName || undefined,
+                simulationTop: this.simulationTopModuleName || undefined
+            });
+            const activeContext = targetContextService.getActiveTargetContext();
+
+            if (config?.activeTarget && !config.targets[config.activeTarget]) {
+                items.push(new HdlInfoItem(
+                    `[${folder.name}] activeTarget '${config.activeTarget}' is invalid; fallback context is used.`,
+                    `config:${status}`,
+                    'warning',
+                    {
+                        command: 'hdl-helper.openProjectConfig',
+                        title: 'Open Project Config'
+                    }
+                ));
+            }
+
+            if (!activeContext) {
+                items.push(new HdlInfoItem(
+                    `[${folder.name}] unable to resolve active target context.`,
+                    `config:${status}`,
+                    'error',
+                    {
+                        command: 'hdl-helper.openProjectConfig',
+                        title: 'Open Project Config'
+                    }
+                ));
+            } else if (!activeContext.top) {
+                items.push(new HdlInfoItem(
+                    `[${folder.name}] active target '${activeContext.targetId}' has no resolved top.`,
+                    `config:${status}`,
+                    'warning',
+                    {
+                        command: 'hdl-helper.openProjectConfig',
+                        title: 'Open Project Config'
+                    }
+                ));
             }
 
             configService.dispose();

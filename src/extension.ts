@@ -16,6 +16,7 @@ import { debugProjectClassification } from './commands/debugProjectClassificatio
 import { debugActiveTargetContext } from './commands/debugActiveTargetContext';
 import { debugDualHierarchyState } from './commands/debugDualHierarchyState';
 import { openDualHierarchyRegressionChecklist } from './commands/openDualHierarchyRegressionChecklist';
+import { openProjectConfigFromWorkspace } from './commands/openProjectConfig';
 import { createProjectConfig } from './commands/createProjectConfig';
 import { activateLanguageServer, deactivateLanguageServer } from './languageClient';
 // 引入 V2.0 工程核心
@@ -280,6 +281,11 @@ export function activate(context: vscode.ExtensionContext) {
                 description: 'Generate .hdl-helper/project.json template from workspace',
                 detail: 'Configuration'
             },
+            {
+                label: 'Open Project Config',
+                description: 'Open .hdl-helper/project.json or create when missing',
+                detail: 'Configuration'
+            },
         ], {
             placeHolder: 'HDL Helper Quick Actions'
         });
@@ -334,6 +340,10 @@ export function activate(context: vscode.ExtensionContext) {
         }
         if (action.label === 'Create Project Config') {
             await vscode.commands.executeCommand('hdl-helper.createProjectConfig');
+            return;
+        }
+        if (action.label === 'Open Project Config') {
+            await vscode.commands.executeCommand('hdl-helper.openProjectConfig');
         }
     }));
 
@@ -378,6 +388,11 @@ export function activate(context: vscode.ExtensionContext) {
                 label: '[Action] Create Project Config',
                 description: 'Generate .hdl-helper/project.json template',
                 command: 'hdl-helper.createProjectConfig'
+            },
+            {
+                label: '[Action] Open Project Config',
+                description: 'Open existing config or create template',
+                command: 'hdl-helper.openProjectConfig'
             }
         ], {
             placeHolder: 'Hierarchy Tools (Settings / Diagnostics / Action)'
@@ -677,6 +692,10 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.createProjectConfig', async () => {
         await createProjectConfig(projectManager);
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.openProjectConfig', async () => {
+        await openProjectConfigFromWorkspace(async () => createProjectConfig(projectManager));
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.runSimulation', async (moduleName: string, sourceUri?: vscode.Uri) => {

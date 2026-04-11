@@ -21,6 +21,7 @@ import {
 	inferDefaultTops
 } from '../commands/createProjectConfig';
 import { buildTargetContextDebugSnapshot } from '../commands/debugActiveTargetContext';
+import { getProjectConfigPath, openProjectConfig } from '../commands/openProjectConfig';
 import { buildConfigIssues } from '../project/configDiagnostics';
 // import * as myExtension from '../../extension';
 
@@ -390,5 +391,57 @@ suite('Extension Test Suite', () => {
 		});
 
 		assert.ok(issues.some(issue => issue.message.includes("Target 'sim_default' has no resolved top.")));
+	});
+
+	test('Open project config helper opens existing config file', async () => {
+		const opened: string[] = [];
+		let createCalls = 0;
+		let warningCalls = 0;
+
+		const result = await openProjectConfig({
+			workspaceRoot: 'C:/repo',
+			existsSync: () => true,
+			openConfig: async (filePath: string) => {
+				opened.push(filePath);
+			},
+			runCreate: async () => {
+				createCalls += 1;
+			},
+			showWarning: () => {
+				warningCalls += 1;
+			}
+		});
+
+		assert.strictEqual(result, 'opened');
+		assert.strictEqual(opened.length, 1);
+		assert.strictEqual(createCalls, 0);
+		assert.strictEqual(warningCalls, 0);
+		assert.ok((opened[0] || '').endsWith('project.json'));
+		assert.ok((getProjectConfigPath('C:/repo') || '').endsWith('project.json'));
+	});
+
+	test('Open project config helper creates template when config file is missing', async () => {
+		let openCalls = 0;
+		let createCalls = 0;
+		let warningCalls = 0;
+
+		const result = await openProjectConfig({
+			workspaceRoot: 'C:/repo',
+			existsSync: () => false,
+			openConfig: async () => {
+				openCalls += 1;
+			},
+			runCreate: async () => {
+				createCalls += 1;
+			},
+			showWarning: () => {
+				warningCalls += 1;
+			}
+		});
+
+		assert.strictEqual(result, 'created');
+		assert.strictEqual(openCalls, 0);
+		assert.strictEqual(createCalls, 1);
+		assert.strictEqual(warningCalls, 1);
 	});
 });

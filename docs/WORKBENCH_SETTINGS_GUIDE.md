@@ -22,6 +22,8 @@ This guide lists workbench-related settings that can be configured directly in V
 - Quick Actions: `HDL: Quick Actions` -> `Debug Dual Hierarchy State`
 - Command Palette: `HDL: Debug Active Target Context`
 - Quick Actions: `HDL: Quick Actions` -> `Debug Active Target Context`
+- Command Palette: `HDL: Open Project Config`
+- Quick Actions: `HDL: Quick Actions` -> `Open Project Config`
 - Command Palette: `HDL: Open Dual Hierarchy Regression Checklist`
 - Quick Actions: `HDL: Quick Actions` -> `Open Dual Hierarchy Regression Checklist`
 
@@ -35,6 +37,7 @@ This guide lists workbench-related settings that can be configured directly in V
   - Dual Hierarchy Regression Checklist
   - Debug Dual Hierarchy State
   - Debug Active Target Context
+  - Open Project Config
   - Clear Top Module
 - In `Hierarchy Tools`, entries are grouped with prefixes for faster scanning:
   - `[Settings] ...`
@@ -58,7 +61,7 @@ This guide lists workbench-related settings that can be configured directly in V
 
 - `hdl-helper.projectConfig.enabled`
   - Enable project.json-driven classification and context.
-  - When enabled, explorer shows `Diagnostics` section with project config issues (missing/invalid config, unresolved target tops, and validation warnings).
+  - When enabled, explorer shows `Diagnostics` section with project config issues (missing/invalid config, unresolved target tops, validation warnings, and active-target fallback issues).
 
 - `hdl-helper.targetDrivenRuns.enabled`
   - Enable target-oriented run management.

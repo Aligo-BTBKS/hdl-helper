@@ -315,3 +315,32 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（19 passing）。
+
+## 2026-04-11 - Iteration 3 Day 4: Diagnostics Actionability and ActiveTarget Signals
+
+- 目标: 继续迭代 Diagnostics 区域可操作性，补充 activeTarget 解析问题提示与一键配置入口。
+- 变更文件:
+  - src/commands/openProjectConfig.ts
+  - src/extension.ts
+  - src/project/hdlTreeProvider.ts
+  - src/test/extension.test.ts
+  - package.json
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - 新增命令 `HDL: Open Project Config`：
+    - 存在 `.hdl-helper/project.json` 时直接打开；
+    - 缺失时自动触发模板创建流程（复用 `createProjectConfig`）。
+  - Quick Actions 与 Hierarchy Tools 增加 `Open Project Config` 入口。
+  - Explorer Diagnostics 项统一挂接 `Open Project Config` 命令，提升修复链路闭环效率。
+  - Diagnostics 区新增 active target 相关问题提示：
+    - activeTarget 无效导致回退
+    - active target context 无法解析
+    - active target 无解析 top
+  - 新增最小回归测试：
+    - `Open project config helper opens existing config file`
+    - `Open project config helper creates template when config file is missing`
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（21 passing）。

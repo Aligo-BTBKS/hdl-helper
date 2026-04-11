@@ -204,6 +204,12 @@
         "title": "HDL: Create Project Config",
         "category": "HDL Helper",
         "icon": "$(new-file)"
+      },
+      {
+        "command": "hdl-helper.openProjectConfig",
+        "title": "HDL: Open Project Config",
+        "category": "HDL Helper",
+        "icon": "$(go-to-file)"
       }
     ],
     "configuration": {
