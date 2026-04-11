@@ -53,7 +53,9 @@ export async function openRecentRuns(stateService: StateService): Promise<void> 
     const picked = await vscode.window.showQuickPick(
         entries.map(entry => ({
             label: entry.targetId === activeTargetId ? `[ACTIVE] ${entry.targetId}` : entry.targetId,
-            description: entry.record.success ? 'success' : 'failed',
+            description: entry.record.success
+                ? 'success'
+                : `failed (${entry.record.failureType || 'unknown'})`,
             detail: `${entry.record.taskName || 'n/a'} | ${new Date(entry.record.timestamp).toLocaleString()}`,
             entry
         })),

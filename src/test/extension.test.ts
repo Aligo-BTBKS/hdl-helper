@@ -476,6 +476,20 @@ suite('Extension Test Suite', () => {
 		assert.ok(lines.some(line => line.includes('Waveform: C:/repo/build/tb_top.fst')));
 	});
 
+	test('Recent runs formatter includes failure type for failed records', () => {
+		const lines = formatRunRecords({
+			sim_default: {
+				targetId: 'sim_default',
+				timestamp: 1000,
+				success: false,
+				failureType: 'compile',
+				taskName: 'Simulate tb_top'
+			}
+		});
+
+		assert.ok(lines.some(line => line.includes('FailureType: compile')));
+	});
+
 	test('Rerun top resolver prefers explicit top field', () => {
 		const top = resolveRerunTop({
 			targetId: 'sim_default',
@@ -578,6 +592,23 @@ suite('Extension Test Suite', () => {
 		});
 
 		assert.deepStrictEqual(actions, ['Open Waveform', 'Open Log']);
+	});
+
+	test('Recent runs picker description includes failure type when failed', () => {
+		const entries = getRecentRunEntries({
+			sim_default: {
+				targetId: 'sim_default',
+				timestamp: 100,
+				success: false,
+				failureType: 'runtime'
+			}
+		});
+
+		const description = entries[0].record.success
+			? 'success'
+			: `failed (${entries[0].record.failureType || 'unknown'})`;
+
+		assert.strictEqual(description, 'failed (runtime)');
 	});
 
 	test('Recent runs helper prioritizes active target at top', () => {

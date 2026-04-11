@@ -901,6 +901,7 @@ export function activate(context: vscode.ExtensionContext) {
                 taskName: task.name,
                 timestamp: Date.now(),
                 success: runResult.success,
+                failureType: runResult.failureType,
                 waveformPath: runResult.waveformPath,
                 buildDir: runResult.buildDir,
                 logPath: runResult.logPath

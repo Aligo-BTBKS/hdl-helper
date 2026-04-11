@@ -5,6 +5,7 @@ import * as cp from 'child_process';
 import * as iconv from 'iconv-lite';
 import { ProjectManager } from '../project/projectManager';
 import { FilelistParser } from '../project/filelistParser';
+import { RunFailureType } from '../project/types';
 
 export interface HdlSimTask {
     name: string;
@@ -28,6 +29,7 @@ export interface HdlSimRunResult {
     taskName: string;
     top: string;
     buildDir: string;
+    failureType?: RunFailureType;
     waveformPath?: string;
     logPath?: string;
     message?: string;
@@ -239,6 +241,7 @@ export class SimManager {
                 taskName: task.name,
                 top: task.top,
                 buildDir: '',
+                failureType: 'precheck',
                 message: 'No workspace folder open for simulation.'
             };
         }
@@ -261,6 +264,7 @@ export class SimManager {
                 taskName: task.name,
                 top: task.top,
                 buildDir,
+                failureType: 'precheck',
                 message: `Icarus Verilog not found: ${iverilogPath}`
             };
         }
@@ -270,6 +274,7 @@ export class SimManager {
                 taskName: task.name,
                 top: task.top,
                 buildDir,
+                failureType: 'precheck',
                 message: `VVP runtime not found: ${vvpPath}`
             };
         }
@@ -293,6 +298,7 @@ export class SimManager {
                     taskName: task.name,
                     top: task.top,
                     buildDir,
+                    failureType: 'precheck',
                     message: `Cannot find top module '${task.top}'.`
                 };
             }
@@ -340,6 +346,7 @@ export class SimManager {
                 taskName: task.name,
                 top: task.top,
                 buildDir,
+                failureType: 'precheck',
                 message: `No source files resolved for task '${task.name}'.`
             };
         }
@@ -369,6 +376,7 @@ export class SimManager {
                 taskName: task.name,
                 top: task.top,
                 buildDir,
+                failureType: 'unsupported',
                 message: `Simulator tool '${task.tool}' is not supported yet.`
             };
         }
@@ -402,16 +410,34 @@ export class SimManager {
 
         this.outputChannel.appendLine(`[Sim] Compiling: ${cmd}`);
 
+        let runCmd = `${this.quotePath(vvpPath)} ${this.quotePath(vvpFile)}`;
+        if (waveformEnabled && waveformFormat === 'fst') {
+            runCmd += ` -fst`;
+        }
+
         try {
             await this.execPromise(cmd, workingDir);
             this.outputChannel.appendLine(`[Sim] Compilation successful.`);
-            
-            // 运行 VVP
-            let runCmd = `${this.quotePath(vvpPath)} ${this.quotePath(vvpFile)}`;
-            if (waveformEnabled && waveformFormat === 'fst') {
-                runCmd += ` -fst`;
-            }
+        } catch (err: any) {
+            this.outputChannel.appendLine(`[Error] Compilation failed:\n${err.message}`);
+            const logPath = path.join(buildDir, `${task.top}.run.log`);
+            await fs.promises.writeFile(
+                logPath,
+                `Compile Command:\n${cmd}\n\nRun Command:\n${runCmd}\n\nCompilation failed:\n${err?.message || 'unknown error'}\n`,
+                'utf8'
+            );
+            return {
+                success: false,
+                taskName: task.name,
+                top: task.top,
+                buildDir,
+                logPath,
+                failureType: 'compile',
+                message: err?.message || 'Compilation failed.'
+            };
+        }
 
+        try {
             this.outputChannel.appendLine(`[Sim] Running: ${runCmd}`);
             const output = await this.execPromise(runCmd, workingDir);
             this.outputChannel.appendLine(output);
@@ -452,15 +478,20 @@ export class SimManager {
             };
 
         } catch (err: any) {
-            this.outputChannel.appendLine(`[Error] Simulation failed:\n${err.message}`);
+            this.outputChannel.appendLine(`[Error] Runtime failed:\n${err.message}`);
             const logPath = path.join(buildDir, `${task.top}.run.log`);
-            await fs.promises.writeFile(logPath, `Simulation failed:\n${err?.message || 'unknown error'}\n`, 'utf8');
+            await fs.promises.writeFile(
+                logPath,
+                `Compile Command:\n${cmd}\n\nRun Command:\n${runCmd}\n\nRuntime failed:\n${err?.message || 'unknown error'}\n`,
+                'utf8'
+            );
             return {
                 success: false,
                 taskName: task.name,
                 top: task.top,
                 buildDir,
                 logPath,
+                failureType: 'runtime',
                 message: err?.message || 'Simulation failed.'
             };
         }

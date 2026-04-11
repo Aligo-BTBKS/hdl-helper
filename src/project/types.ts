@@ -192,6 +192,8 @@ export interface WorkbenchState {
     toolchainStatusByProfile: Record<string, ToolchainStatus>;
 }
 
+export type RunFailureType = 'precheck' | 'compile' | 'runtime' | 'unsupported';
+
 /**
  * Run record for a specific target execution.
  */
@@ -201,6 +203,7 @@ export interface RunRecord {
     taskName?: string;
     timestamp: number;
     success: boolean;
+    failureType?: RunFailureType;
     waveformPath?: string;
     logPath?: string;
     buildDir?: string;

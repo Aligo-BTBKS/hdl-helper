@@ -13,6 +13,9 @@ export function formatRunRecords(records: Record<string, RunRecord>): string[] {
         const record = records[targetId];
         lines.push(`Target: ${targetId}`);
         lines.push(`  Success: ${record.success}`);
+        if (!record.success) {
+            lines.push(`  FailureType: ${record.failureType || 'n/a'}`);
+        }
         lines.push(`  Timestamp: ${new Date(record.timestamp).toISOString()}`);
         lines.push(`  Top: ${record.top || 'n/a'}`);
         lines.push(`  Task: ${record.taskName || 'n/a'}`);

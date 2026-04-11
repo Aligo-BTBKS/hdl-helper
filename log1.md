@@ -577,3 +577,36 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（39 passing）。
+
+## 2026-04-11 - Iteration 4 Day 9: Run Failure Type Classification
+
+- 目标: 继续推进 Iteration 4 收口项，补齐“失败类型可区分”的运行可观测性。
+- 变更文件:
+  - src/project/types.ts
+  - src/simulation/simManager.ts
+  - src/extension.ts
+  - src/commands/debugRecentRuns.ts
+  - src/commands/openRecentRuns.ts
+  - src/project/hdlTreeProvider.ts
+  - src/test/extension.test.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - 新增统一失败类型 `RunFailureType`：`precheck` / `compile` / `runtime` / `unsupported`。
+  - `SimManager.runTask/runIverilog` 按阶段打标失败类型：
+    - 前置检查失败（workspace/tool/top/source）-> `precheck`
+    - 编译失败 -> `compile`
+    - 运行失败 -> `runtime`
+    - 不支持仿真器 -> `unsupported`
+  - `runSimulation` 写入 run record 时同步保存 `failureType`。
+  - 可视化贯通：
+    - `Debug Recent Runs By Target` 输出 `FailureType`
+    - `Open Recent Runs` 失败记录显示 `failed(<type>)`
+    - Explorer `Tasks and Runs` 失败记录显示 `failed(<type>)`
+  - 新增最小回归测试：
+    - `Recent runs formatter includes failure type for failed records`
+    - `Recent runs picker description includes failure type when failed`
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（41 passing）。

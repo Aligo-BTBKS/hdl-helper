@@ -185,7 +185,9 @@ class TasksRunsRootItem extends vscode.TreeItem {
 class RunRecordItem extends vscode.TreeItem {
     constructor(readonly targetId: string, readonly record: RunRecord) {
         super(targetId, vscode.TreeItemCollapsibleState.None);
-        this.description = record.success ? 'success' : 'failed';
+        this.description = record.success
+            ? 'success'
+            : `failed (${record.failureType || 'unknown'})`;
         this.tooltip = `${record.taskName || 'n/a'} | ${new Date(record.timestamp).toLocaleString()}`;
         this.iconPath = new vscode.ThemeIcon(record.success ? 'pass' : 'warning');
         this.contextValue = 'run-record';
