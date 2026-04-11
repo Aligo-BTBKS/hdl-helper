@@ -2,6 +2,14 @@ import * as vscode from 'vscode';
 import { ProjectManager } from './projectManager';
 import { HdlModule, HdlInstance } from './hdlSymbol';
 import * as path from 'path';
+import { ClassificationService } from './classificationService';
+import { ProjectConfigService } from './projectConfigService';
+import { ExplorerViewModelBuilder } from './explorerViewModelBuilder';
+import {
+    FileClassificationResult,
+    ProjectConfigStatus,
+    SourcesSection
+} from './types';
 
 /**
  * 树节点类型：可能是“模块定义”或者“实例化引用”
@@ -18,10 +26,67 @@ class HdlInfoItem extends vscode.TreeItem {
     }
 }
 
-export class HdlTreeProvider implements vscode.TreeDataProvider<HdlItem> {
+class SourcesRootItem extends vscode.TreeItem {
+    constructor() {
+        super('Sources', vscode.TreeItemCollapsibleState.Expanded);
+        this.iconPath = new vscode.ThemeIcon('files');
+        this.contextValue = 'sources-root';
+    }
+}
+
+class SourceGroupItem extends vscode.TreeItem {
+    constructor(
+        label: string,
+        readonly files: FileClassificationResult[],
+        icon: string
+    ) {
+        super(
+            label,
+            files.length > 0
+                ? vscode.TreeItemCollapsibleState.Collapsed
+                : vscode.TreeItemCollapsibleState.None
+        );
+        this.description = `${files.length}`;
+        this.iconPath = new vscode.ThemeIcon(icon);
+        this.contextValue = 'sources-group';
+    }
+}
+
+class SourceFileItem extends vscode.TreeItem {
+    constructor(readonly filePath: string) {
+        super(path.basename(filePath), vscode.TreeItemCollapsibleState.None);
+        this.iconPath = new vscode.ThemeIcon('file-code');
+        this.contextValue = 'sources-file';
+        this.resourceUri = vscode.Uri.file(filePath);
+        this.command = {
+            command: 'vscode.open',
+            title: 'Open File',
+            arguments: [vscode.Uri.file(filePath)]
+        };
+    }
+}
+
+class LegacyHierarchyRootItem extends vscode.TreeItem {
+    constructor() {
+        super('Module Hierarchy (Legacy)', vscode.TreeItemCollapsibleState.Expanded);
+        this.iconPath = new vscode.ThemeIcon('symbol-class');
+        this.contextValue = 'legacy-hierarchy-root';
+    }
+}
+
+type HdlTreeItem =
+    | HdlModule
+    | HdlInstance
+    | HdlInfoItem
+    | SourcesRootItem
+    | SourceGroupItem
+    | SourceFileItem
+    | LegacyHierarchyRootItem;
+
+export class HdlTreeProvider implements vscode.TreeDataProvider<HdlTreeItem> {
     // 事件发射器：当数据变化时，通知 VS Code 刷新 UI
-    private _onDidChangeTreeData: vscode.EventEmitter<HdlItem | undefined | null | void> = new vscode.EventEmitter<HdlItem | undefined | null | void>();
-    readonly onDidChangeTreeData: vscode.Event<HdlItem | undefined | null | void> = this._onDidChangeTreeData.event;
+    private _onDidChangeTreeData: vscode.EventEmitter<HdlTreeItem | undefined | null | void> = new vscode.EventEmitter<HdlTreeItem | undefined | null | void>();
+    readonly onDidChangeTreeData: vscode.Event<HdlTreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
     
     // 当前选中的 Top 模块名
     private topModuleName: string | null = null;
@@ -47,8 +112,31 @@ export class HdlTreeProvider implements vscode.TreeDataProvider<HdlItem> {
     /**
      * 获取单个节点的 UI 信息
      */
-    getTreeItem(element: HdlItem): vscode.TreeItem {
+    getTreeItem(element: HdlTreeItem): vscode.TreeItem {
         if (element instanceof HdlInfoItem) {
+            return element;
+        }
+
+        if (element instanceof SourcesRootItem) {
+            return element;
+        }
+
+        if (element instanceof SourceGroupItem) {
+            return element;
+        }
+
+        if (element instanceof SourceFileItem) {
+            const item = element;
+            const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(element.filePath));
+            if (folder) {
+                item.description = path.relative(folder.uri.fsPath, element.filePath);
+            } else {
+                item.description = element.filePath;
+            }
+            return item;
+        }
+
+        if (element instanceof LegacyHierarchyRootItem) {
             return element;
         }
 
@@ -99,7 +187,7 @@ export class HdlTreeProvider implements vscode.TreeDataProvider<HdlItem> {
     /**
      * 获取子节点 (递归核心)
      */
-    getChildren(element?: HdlItem): vscode.ProviderResult<HdlItem[]> {
+    async getChildren(element?: HdlTreeItem): Promise<HdlTreeItem[]> {
         // 1. 根节点 (Root)
         if (!element) {
             if (this.projectManager.isScanning()) {
@@ -112,45 +200,34 @@ export class HdlTreeProvider implements vscode.TreeDataProvider<HdlItem> {
                 ];
             }
 
-            // 如果用户设置了 Top，只显示那个 Top
-            if (this.topModuleName) {
-                const top = this.projectManager.getModule(this.topModuleName);
-                return top ? [top] : [];
-            }
-            // 没设置 Top，显示所有模块
-            const allModules = this.projectManager.getAllModules();
-            if (allModules.length > 0) {
-                return allModules;
+            if (this.isRoleGroupedSourcesEnabled()) {
+                return [new SourcesRootItem(), new LegacyHierarchyRootItem()];
             }
 
-            const summary = this.projectManager.getLastScanSummary();
-            if (summary.lastError) {
-                return [
-                    new HdlInfoItem(
-                        'Project scan failed',
-                        'Click to rescan project',
-                        'error',
-                        {
-                            command: 'hdl-helper.refreshProject',
-                            title: 'Rescan Project'
-                        }
-                    )
-                ];
-            }
+            return this.getLegacyRootChildren();
+        }
 
-            return [
-                new HdlInfoItem(
-                    'No modules found',
-                    'Open a .v/.sv file and click to rescan',
-                    'info',
-                    {
-                        command: 'hdl-helper.refreshProject',
-                        title: 'Rescan Project'
-                    }
-                )
-            ];
-        } 
-        
+        if (element instanceof SourcesRootItem) {
+            const sources = await this.getMergedSourcesSection();
+            return this.buildSourceGroupItems(sources);
+        }
+
+        if (element instanceof SourceGroupItem) {
+            return element.files.map(file => new SourceFileItem(file.uri));
+        }
+
+        if (element instanceof SourceFileItem) {
+            return [];
+        }
+
+        if (element instanceof LegacyHierarchyRootItem) {
+            return this.getLegacyRootChildren();
+        }
+
+        if (element instanceof HdlInfoItem) {
+            return [];
+        }
+
         // 2. 如果当前节点是“模块定义” (Module) -> 返回它内部的实例化
         if (element instanceof HdlModule) {
             return element.instances;
@@ -170,10 +247,168 @@ export class HdlTreeProvider implements vscode.TreeDataProvider<HdlItem> {
             }
         }
 
-        if (element instanceof HdlInfoItem) {
-            return [];
-        }
-        
         return [];
+    }
+
+    private isRoleGroupedSourcesEnabled(): boolean {
+        return vscode.workspace
+            .getConfiguration('hdl-helper')
+            .get<boolean>('workbench.roleGroupedSources', false);
+    }
+
+    private getLegacyRootChildren(): HdlTreeItem[] {
+        // 如果用户设置了 Top，只显示那个 Top
+        if (this.topModuleName) {
+            const top = this.projectManager.getModule(this.topModuleName);
+            return top ? [top] : [];
+        }
+
+        // 没设置 Top，显示所有模块
+        const allModules = this.projectManager.getAllModules();
+        if (allModules.length > 0) {
+            return allModules;
+        }
+
+        const summary = this.projectManager.getLastScanSummary();
+        if (summary.lastError) {
+            return [
+                new HdlInfoItem(
+                    'Project scan failed',
+                    'Click to rescan project',
+                    'error',
+                    {
+                        command: 'hdl-helper.refreshProject',
+                        title: 'Rescan Project'
+                    }
+                )
+            ];
+        }
+
+        return [
+            new HdlInfoItem(
+                'No modules found',
+                'Open a .v/.sv file and click to rescan',
+                'info',
+                {
+                    command: 'hdl-helper.refreshProject',
+                    title: 'Rescan Project'
+                }
+            )
+        ];
+    }
+
+    private async getMergedSourcesSection(): Promise<SourcesSection> {
+        const merged = this.createEmptySourcesSection();
+        const folders = vscode.workspace.workspaceFolders;
+        if (!folders || folders.length === 0) {
+            return merged;
+        }
+
+        for (const folder of folders) {
+            const workspaceRoot = folder.uri.fsPath;
+            const configEnabled = vscode.workspace
+                .getConfiguration('hdl-helper', folder.uri)
+                .get<boolean>('projectConfig.enabled', false);
+
+            let projectConfigStatus = ProjectConfigStatus.NotEnabled;
+            let projectConfig;
+
+            if (configEnabled) {
+                const configService = new ProjectConfigService(workspaceRoot);
+                projectConfig = await configService.loadConfig();
+                projectConfigStatus = configService.getStatus();
+                configService.dispose();
+            }
+
+            const files = await this.findSourceFiles(folder);
+            const classifier = new ClassificationService({
+                workspaceRoot,
+                projectConfig,
+                activeTarget: projectConfig?.activeTarget
+            });
+
+            const results = await classifier.classifyWorkspace(files);
+            const builder = new ExplorerViewModelBuilder({
+                workspaceRoot,
+                projectName: projectConfig?.name,
+                projectConfigStatus,
+                activeTarget: projectConfig?.activeTarget,
+                classificationResults: results
+            });
+
+            this.appendSources(merged, builder.build().sources);
+        }
+
+        return merged;
+    }
+
+    private createEmptySourcesSection(): SourcesSection {
+        return {
+            designSources: [],
+            simulationSources: [],
+            verificationSources: [],
+            constraints: [],
+            scripts: [],
+            ipGenerated: [],
+            unassigned: []
+        };
+    }
+
+    private appendSources(target: SourcesSection, source: SourcesSection): void {
+        target.designSources.push(...source.designSources);
+        target.simulationSources.push(...source.simulationSources);
+        target.verificationSources.push(...source.verificationSources);
+        target.constraints.push(...source.constraints);
+        target.scripts.push(...source.scripts);
+        target.ipGenerated.push(...source.ipGenerated);
+        target.unassigned.push(...source.unassigned);
+    }
+
+    private buildSourceGroupItems(sources: SourcesSection): HdlTreeItem[] {
+        return [
+            new SourceGroupItem('Design Sources', sources.designSources, 'symbol-module'),
+            new SourceGroupItem('Simulation Sources', sources.simulationSources, 'beaker'),
+            new SourceGroupItem('Verification Sources', sources.verificationSources, 'checklist'),
+            new SourceGroupItem('Constraints', sources.constraints, 'symbol-key'),
+            new SourceGroupItem('Scripts', sources.scripts, 'terminal-powershell'),
+            new SourceGroupItem('IP / Generated', sources.ipGenerated, 'package'),
+            new SourceGroupItem('Unassigned / Other HDL Files', sources.unassigned, 'question')
+        ];
+    }
+
+    private async findSourceFiles(folder: vscode.WorkspaceFolder): Promise<vscode.Uri[]> {
+        const patterns = [
+            '**/*.v',
+            '**/*.vh',
+            '**/*.sv',
+            '**/*.svh',
+            '**/*.sva',
+            '**/*.vhd',
+            '**/*.vhdl',
+            '**/*.xdc',
+            '**/*.sdc',
+            '**/*.tcl',
+            '**/*.xci'
+        ];
+
+        const excludes = [
+            '**/node_modules/**',
+            '**/.git/**',
+            '**/.srcs/**',
+            '**/.sim/**',
+            '**/build/**',
+            '**/out/**'
+        ];
+
+        const files: vscode.Uri[] = [];
+        for (const pattern of patterns) {
+            const found = await vscode.workspace.findFiles(
+                new vscode.RelativePattern(folder, pattern),
+                `{${excludes.join(',')}}`
+            );
+            files.push(...found);
+        }
+
+        return Array.from(new Set(files.map(f => f.fsPath))).map(fsPath => vscode.Uri.file(fsPath));
     }
 }

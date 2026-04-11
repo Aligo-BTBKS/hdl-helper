@@ -638,3 +638,108 @@
   - Day 1 任务全部完成并通过验证。
   - 三个核心服务骨架已就位，接口清晰，职责明确。
   - 可以进入 Day 2：实现最小 ClassificationService + debug command。
+
+## 2026-04-11 - Iteration 1 Day 2: Classification Enhancement & Debug Command
+
+- 目标: 完成 Iteration 1 (V1-A) Day 2 任务，增强分类服务并添加调试命令。
+- 变更文件:
+  - src/project/classificationService.ts（增强 glob 匹配）
+  - src/commands/debugProjectClassification.ts（新增）
+  - src/extension.ts（注册命令）
+  - package.json（注册命令）
+  - log.md
+- 关键变更:
+  - **ClassificationService 增强**:
+    - 实现完整的 glob 模式匹配（支持 `*`、`?`、`**` 通配符）。
+    - 支持递归模式（`**/*.sv`）、单层模式（`rtl/*`）。
+    - 支持前缀匹配（`tb_*.sv`）、后缀匹配（`*_tb.sv`）。
+    - 增强 matchesPattern 方法，支持目录前缀、精确匹配、通配符匹配。
+    - 新增 globMatch 方法，将 glob 模式转换为正则表达式。
+  - **Debug Command 实现（150+ 行）**:
+    - 新增命令：`HDL: Debug Current Project Classification`。
+    - 输出到专用 Output Channel：`HDL Helper - Classification`。
+    - 扫描所有 HDL 文件（.v、.sv、.vhd、.xdc、.sdc、.tcl、.xci）。
+    - 显示分类摘要（按 role 分组统计）。
+    - 显示详细结果（每个文件的 physicalType、rolePrimary、roleSecondary、sourceOfTruth、inActiveTarget）。
+    - 支持多工作区（遍历所有 workspace folders）。
+    - 显示 project config 状态（name、version、source sets、targets、active target）。
+  - **命令注册**:
+    - 在 extension.ts 中导入 debugProjectClassification。
+    - 创建专用 Output Channel。
+    - 注册命令到 VS Code。
+    - 在 package.json 中声明命令。
+- 架构遵循:
+  - ✅ Debug command 使用 ClassificationService API（不直接操作文件）。
+  - ✅ 输出格式清晰，易于调试。
+  - ✅ 支持 config-driven 和 heuristic 双模式验证。
+  - ✅ 命令独立，不影响现有功能。
+- 验证:
+  - src/project/classificationService.ts 诊断检查: No errors found。
+  - src/commands/debugProjectClassification.ts 诊断检查: No errors found。
+  - src/extension.ts 诊断检查: No errors found。
+  - package.json 诊断检查: No errors found。
+  - npm run -s compile: 通过（Exit Code: 0）。
+  - npm run -s lint: 通过（Exit Code: 0）。
+- 结论:
+  - Day 2 任务全部完成并通过验证。
+  - ClassificationService 已增强，支持完整 glob 匹配。
+  - Debug command 已实现，可用于验证分类规则。
+  - 可以进入 Day 3：ExplorerViewModelBuilder + Sources 分组渲染。
+## 2026-04-11 - Iteration 1 Day 3: TreeProvider Integration (In Progress)
+
+- 目标: 将 ExplorerViewModelBuilder 接入 HDL Explorer，落地 role-grouped Sources 与 feature flag 控制。
+- 变更文件:
+  - src/project/hdlTreeProvider.ts
+  - src/project/targetContextService.bugfix.test.ts（类型修正，仅为恢复编译）
+  - log.md
+- 关键变更:
+  - hdlTreeProvider 增加 feature flag 分支：`hdl-helper.workbench.roleGroupedSources`。
+  - flag 开启时渲染 `Sources` 根节点，并显示 6 大组 + `Unassigned / Other HDL Files`。
+  - Sources 数据通过 ClassificationService + ExplorerViewModelBuilder 构建并分组。
+  - 保留 `Module Hierarchy (Legacy)` 节点作为回退路径，legacy 树逻辑未删除。
+  - source file 节点支持点击打开文件，并显示相对路径描述。
+- 验证:
+  - npm run -s compile: 通过（Exit Code: 0）。
+  - npm run -s lint: 通过（Exit Code: 0）。
+  - hdlTreeProvider.ts 诊断检查: No errors found。
+- 待完成:
+  - 手工 UI 回归：flag 开/关切换、分组计数与展开行为、legacy 回退链路。
+- Day 3 进展补充:
+  - extension.ts 新增配置变更监听：切换 `hdl-helper.workbench.roleGroupedSources` / `hdl-helper.projectConfig.enabled` 时自动 refresh HDL Explorer。
+  - 回归验证：compile/lint 通过；test 仍存在 1 个失败（`Filelist parser handles nested filelists and env vars`，断言 tbFile 未命中）。
+- Day 3 回归补充:
+  - 修复 filelistParser Windows 路径归一化问题（absolute path 混合分隔符），`Filelist parser handles nested filelists and env vars` 已通过。
+  - 当前回归结果：compile/lint/test 全部通过。
+## 2026-04-11 - Iteration 1 Day 3: Completion
+
+- 目标: 完成 Day 3 的 TreeProvider 集成收口与回归。
+- 完成项:
+  - roleGroupedSources 开启后，HDL Explorer 正常显示 Sources 分组与 Module Hierarchy (Legacy) 并存。
+  - feature flag 配置变更已支持自动刷新视图（无需手动 refresh）。
+  - filelistParser 路径归一化修复后，测试恢复全绿。
+- 验证:
+  - npm run -s compile: 通过。
+  - npm run -s lint: 通过。
+  - npm run -s test: 通过（2 passing）。
+- 结论:
+  - Iteration 1 Day 3 已完成，可进入 Day 4（兼容性与回归清单收口）。
+## 2026-04-11 - Iteration 1 Day 4: Compatibility & Regression Closure
+
+- 目标: 完成 Day 4 兼容性小修与回归清单闭环。
+- 变更文件:
+  - src/project/classificationService.ts
+  - src/project/filelistParser.ts
+  - src/test/extension.test.ts
+  - docs/ITERATION_1_DAY_4_REGRESSION_CHECKLIST.md
+  - log.md
+- 关键变更:
+  - 兼容性策略：未知路径 HDL 源文件在 heuristic 下默认归类为 Design，减少 Unassigned 误归类。
+  - 保持命名覆盖规则：`tb_*` 仍归 Simulation，`*_checker`/`*_bind` 仍归 Verification。
+  - filelistParser 增加 `path.normalize(...)`，修复 Windows 混合分隔符导致的断言不一致。
+  - 新增回归测试：`Classification heuristic defaults unknown HDL paths to design`。
+- 验证:
+  - npm run -s compile: 通过。
+  - npm run -s lint: 通过。
+  - npm -s test: 通过（3 passing）。
+- 结论:
+  - Day 4 回归清单闭环完成，可进入统一提交整理。

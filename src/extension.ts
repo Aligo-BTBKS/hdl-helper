@@ -12,6 +12,7 @@ import { visualizeFsm } from './commands/generateFsm';
 import { generateAxiCommand } from './commands/generateAxi';
 import { generateMemoryCommand } from './commands/generateMemory';
 import { generateRegistersCommand } from './commands/generateRegisters';
+import { debugProjectClassification } from './commands/debugProjectClassification';
 import { activateLanguageServer, deactivateLanguageServer } from './languageClient';
 // 引入 V2.0 工程核心
 import { ProjectManager } from './project/projectManager';
@@ -161,6 +162,16 @@ export function activate(context: vscode.ExtensionContext) {
         'ip-explorer-view',
         ipCatalogProvider
     );
+
+    // Keep explorer rendering in sync with Day 3 feature-flag toggles.
+    context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(event => {
+        if (
+            event.affectsConfiguration('hdl-helper.workbench.roleGroupedSources') ||
+            event.affectsConfiguration('hdl-helper.projectConfig.enabled')
+        ) {
+            treeProvider.refresh();
+        }
+    }));
 
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.refreshIpExplorer', () => {
         ipCatalogProvider.refresh();
@@ -556,11 +567,18 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     // --- F. 调试命令 ---
+    const classificationOutputChannel = vscode.window.createOutputChannel('HDL Helper - Classification');
+    context.subscriptions.push(classificationOutputChannel);
+
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.debugProject', () => {
         const modules = projectManager.getAllModules();
         vscode.window.showInformationMessage(`工程中共有 ${modules.length} 个模块。`);
         vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
         modules.forEach(m => console.log(`📦 ${m.name} (${path.basename(m.fileUri.fsPath)})`));
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.debugProjectClassification', async () => {
+        await debugProjectClassification(classificationOutputChannel);
     }));
 
     // G. 生成接口文档 (Markdown) - 右键菜单触发

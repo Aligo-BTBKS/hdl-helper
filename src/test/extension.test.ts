@@ -7,6 +7,8 @@ import * as path from 'path';
 // as well as import your extension to test it
 import * as vscode from 'vscode';
 import { FilelistParser } from '../project/filelistParser';
+import { ClassificationService } from '../project/classificationService';
+import { Role } from '../project/types';
 // import * as myExtension from '../../extension';
 
 suite('Extension Test Suite', () => {
@@ -58,5 +60,18 @@ suite('Extension Test Suite', () => {
 		fs.rmSync(tempRoot, { recursive: true, force: true });
 		delete process.env.HDL_HELPER_TEST_ROOT;
 		delete process.env.HDL_HELPER_TEST_INC;
+	});
+
+	test('Classification heuristic defaults unknown HDL paths to design', () => {
+		const workspaceRoot = path.join(os.tmpdir(), 'hdl-helper-classification-root');
+		const service = new ClassificationService({ workspaceRoot });
+
+		const unknownHdl = service.classifyFile(vscode.Uri.file(path.join(workspaceRoot, 'misc', 'child.sv')));
+		const testbenchByName = service.classifyFile(vscode.Uri.file(path.join(workspaceRoot, 'misc', 'tb_top.sv')));
+		const checkerByName = service.classifyFile(vscode.Uri.file(path.join(workspaceRoot, 'misc', 'alu_checker.sv')));
+
+		assert.strictEqual(unknownHdl.rolePrimary, Role.Design);
+		assert.strictEqual(testbenchByName.rolePrimary, Role.Simulation);
+		assert.strictEqual(checkerByName.rolePrimary, Role.Verification);
 	});
 });

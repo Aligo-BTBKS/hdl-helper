@@ -61,7 +61,10 @@ export class TargetContextService {
             return this.getFirstValidTargetContext() || this.getHeuristicContext();
         }
 
-        return this.resolveTargetContext(activeTargetId);
+        // Active target may be stale/invalid: fall back explicitly.
+        return this.resolveTargetContext(activeTargetId)
+            || this.getFirstValidTargetContext()
+            || this.getHeuristicContext();
     }
 
     /**

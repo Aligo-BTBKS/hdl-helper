@@ -53,7 +53,8 @@ export class FilelistParser {
         const rootDir = path.dirname(absFilelist);
 
         const toAbs = (rawPath: string): string => {
-            return path.isAbsolute(rawPath) ? rawPath : path.resolve(rootDir, rawPath);
+            const absPath = path.isAbsolute(rawPath) ? rawPath : path.resolve(rootDir, rawPath);
+            return path.normalize(absPath);
         };
 
         for (let line of lines) {

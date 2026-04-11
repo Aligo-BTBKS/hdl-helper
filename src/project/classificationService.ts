@@ -156,7 +156,7 @@ export class ClassificationService {
     }
 
     private matchesPattern(filePath: string, pattern: string): boolean {
-        // Simple pattern matching (to be enhanced with proper glob)
+        // Enhanced glob pattern matching
         const normalizedPath = filePath.replace(/\\/g, '/');
         const normalizedPattern = pattern.replace(/\\/g, '/');
         
@@ -165,19 +165,40 @@ export class ClassificationService {
             return true;
         }
 
-        // Directory prefix match
+        // Directory prefix match (pattern ends with / or /*)
         if (normalizedPattern.endsWith('/') || normalizedPattern.endsWith('/*')) {
             const dir = normalizedPattern.replace(/\/\*?$/, '');
             return normalizedPath.startsWith(dir + '/');
         }
 
-        // Wildcard match (simple)
-        if (normalizedPattern.includes('*')) {
-            const regex = new RegExp('^' + normalizedPattern.replace(/\*/g, '.*') + '$');
-            return regex.test(normalizedPath);
+        // Glob pattern matching
+        if (normalizedPattern.includes('*') || normalizedPattern.includes('?')) {
+            return this.globMatch(normalizedPath, normalizedPattern);
+        }
+
+        // Prefix match for directory patterns
+        if (normalizedPath.startsWith(normalizedPattern + '/')) {
+            return true;
         }
 
         return false;
+    }
+
+    /**
+     * Simple glob matcher supporting wildcards.
+     * Supports common patterns like recursive, single level, prefix and suffix matches.
+     */
+    private globMatch(path: string, pattern: string): boolean {
+        // Convert glob pattern to regex
+        let regexPattern = pattern
+            .replace(/\./g, '\\.')  // Escape dots
+            .replace(/\*\*/g, '§§') // Placeholder for **
+            .replace(/\*/g, '[^/]*') // * matches anything except /
+            .replace(/§§/g, '.*')    // ** matches anything including /
+            .replace(/\?/g, '.');    // ? matches single char
+
+        const regex = new RegExp('^' + regexPattern + '$');
+        return regex.test(path);
     }
 
     private isInActiveTarget(matchedSets: string[]): boolean {
@@ -219,7 +240,6 @@ export class ClassificationService {
     private classifyByHeuristic(uri: vscode.Uri, physicalType: PhysicalFileType): FileClassificationResult {
         const relativePath = this.getRelativePath(uri);
         const fileName = path.basename(uri.fsPath);
-        const dirName = path.basename(path.dirname(uri.fsPath));
 
         let role = Role.Unassigned;
 
@@ -254,6 +274,11 @@ export class ClassificationService {
             role = Role.IpGenerated;
         }
 
+        // Compatibility default: unknown-path HDL source files are treated as design.
+        if (role === Role.Unassigned && this.isHdlSourceType(physicalType)) {
+            role = Role.Design;
+        }
+
         return {
             uri: uri.fsPath,
             physicalType,
@@ -265,16 +290,34 @@ export class ClassificationService {
     }
 
     private matchesPathPattern(filePath: string, patterns: string[]): boolean {
-        const normalized = filePath.replace(/\\/g, '/').toLowerCase();
+        const normalized = `/${filePath
+            .replace(/\\/g, '/')
+            .toLowerCase()
+            .replace(/^\/+|\/+$/g, '')}/`;
+
         return patterns.some(pattern => {
-            const normalizedPattern = pattern.toLowerCase();
-            return normalized.includes(normalizedPattern);
+            const normalizedPattern = pattern
+                .replace(/\\/g, '/')
+                .toLowerCase()
+                .replace(/^\/+|\/+$/g, '');
+
+            if (!normalizedPattern) {
+                return false;
+            }
+
+            return normalized.includes(`/${normalizedPattern}/`);
         });
     }
 
     // ========================================================================
     // Physical Type Detection
     // ========================================================================
+
+    private isHdlSourceType(physicalType: PhysicalFileType): boolean {
+        return physicalType === PhysicalFileType.Verilog
+            || physicalType === PhysicalFileType.SystemVerilog
+            || physicalType === PhysicalFileType.VHDL;
+    }
 
     private detectPhysicalType(uri: vscode.Uri): PhysicalFileType {
         const ext = path.extname(uri.fsPath).toLowerCase();

@@ -42,6 +42,11 @@
         "category": "HDL Helper"
       },
       {
+        "command": "hdl-helper.debugProjectClassification",
+        "title": "HDL: Debug Current Project Classification",
+        "category": "HDL Helper"
+      },
+      {
         "command": "hdl-helper.quickStart",
         "title": "HDL: Quick Actions",
         "category": "HDL Helper"

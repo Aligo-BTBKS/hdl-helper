@@ -75,6 +75,9 @@ export interface ConfigValidationResult {
 export class ProjectConfigService {
     private static readonly CONFIG_FILE_NAME = 'project.json';
     private static readonly CONFIG_DIR_NAME = '.hdl-helper';
+    private static readonly DIAGNOSTIC_SOURCE = 'HDL Helper';
+    private static readonly DIAGNOSTIC_CODE = 'project-config';
+    private static readonly diagnostics = vscode.languages.createDiagnosticCollection('hdl-helper-project-config');
     
     private workspaceRoot: string;
     private configPath: string;
@@ -117,6 +120,7 @@ export class ProjectConfigService {
         if (!this.configExists()) {
             this.cachedStatus = ProjectConfigStatus.Missing;
             this.cachedConfig = undefined;
+            this.clearDiagnostics();
             return undefined;
         }
 
@@ -132,7 +136,7 @@ export class ProjectConfigService {
             if (!validation.valid) {
                 this.cachedStatus = ProjectConfigStatus.Invalid;
                 this.cachedConfig = undefined;
-                // TODO: Emit diagnostics for validation errors
+                this.publishDiagnostics(validation.errors, validation.warnings);
                 return undefined;
             }
 
@@ -140,13 +144,15 @@ export class ProjectConfigService {
             const normalized = this.normalizeConfig(raw);
             this.cachedConfig = normalized;
             this.cachedStatus = ProjectConfigStatus.Valid;
+            this.publishDiagnostics([], validation.warnings);
             
             return normalized;
         } catch (error) {
             // Parse error or file read error
             this.cachedStatus = ProjectConfigStatus.Invalid;
             this.cachedConfig = undefined;
-            // TODO: Emit diagnostics for parse error
+            const message = error instanceof Error ? error.message : String(error);
+            this.publishDiagnostics([`Failed to parse .hdl-helper/project.json: ${message}`]);
             return undefined;
         }
     }
@@ -171,6 +177,12 @@ export class ProjectConfigService {
         }
         if (!raw.name) {
             errors.push('Missing required field: name');
+        }
+        if (!raw.sourceSets || Object.keys(raw.sourceSets).length === 0) {
+            errors.push('Missing required field: sourceSets');
+        }
+        if (!raw.targets || Object.keys(raw.targets).length === 0) {
+            errors.push('Missing required field: targets');
         }
 
         // Version format
@@ -235,6 +247,20 @@ export class ProjectConfigService {
     public clearCache(): void {
         this.cachedConfig = undefined;
         this.cachedStatus = ProjectConfigStatus.NotEnabled;
+    }
+
+    /**
+     * Clear diagnostics associated with project config.
+     */
+    public clearDiagnostics(): void {
+        ProjectConfigService.diagnostics.delete(vscode.Uri.file(this.configPath));
+    }
+
+    /**
+     * Dispose resources used by this service.
+     */
+    public dispose(): void {
+        this.clearDiagnostics();
     }
 
     // ========================================================================
@@ -322,5 +348,39 @@ export class ProjectConfigService {
     private isValidTargetKind(kind: string): boolean {
         const validKinds = ['design', 'simulation', 'synthesis', 'implementation'];
         return validKinds.includes(kind.toLowerCase());
+    }
+
+    private publishDiagnostics(errors: string[], warnings: string[] = []): void {
+        const uri = vscode.Uri.file(this.configPath);
+        const diagnostics: vscode.Diagnostic[] = [];
+
+        for (const message of errors) {
+            const diagnostic = new vscode.Diagnostic(
+                new vscode.Range(0, 0, 0, 1),
+                message,
+                vscode.DiagnosticSeverity.Error
+            );
+            diagnostic.source = ProjectConfigService.DIAGNOSTIC_SOURCE;
+            diagnostic.code = ProjectConfigService.DIAGNOSTIC_CODE;
+            diagnostics.push(diagnostic);
+        }
+
+        for (const message of warnings) {
+            const diagnostic = new vscode.Diagnostic(
+                new vscode.Range(0, 0, 0, 1),
+                message,
+                vscode.DiagnosticSeverity.Warning
+            );
+            diagnostic.source = ProjectConfigService.DIAGNOSTIC_SOURCE;
+            diagnostic.code = ProjectConfigService.DIAGNOSTIC_CODE;
+            diagnostics.push(diagnostic);
+        }
+
+        if (diagnostics.length === 0) {
+            ProjectConfigService.diagnostics.delete(uri);
+            return;
+        }
+
+        ProjectConfigService.diagnostics.set(uri, diagnostics);
     }
 }
