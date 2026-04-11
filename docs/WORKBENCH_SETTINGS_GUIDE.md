@@ -81,7 +81,7 @@ This guide lists workbench-related settings that can be configured directly in V
   - Use `HDL: Debug Recent Runs By Target` to inspect current stored run records.
   - Use `HDL: Open Last Waveform (Active Target)` to reopen waveform by active target context.
   - Use `HDL: Open Last Log (Active Target)` to reopen latest run log by active target context.
-  - Use `HDL: Open Recent Runs` to browse recent run records and open waveform/log interactively.
+  - Use `HDL: Open Recent Runs` to browse recent run records and open waveform/log interactively (active target record is prioritized and marked).
 
 ## Sources View UI Behavior Settings
 

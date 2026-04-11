@@ -25,7 +25,7 @@ import { getProjectConfigPath, openProjectConfig } from '../commands/openProject
 import { formatRunRecords } from '../commands/debugRecentRuns';
 import { pickRunRecordForTarget } from '../commands/openLastWaveformByTarget';
 import { getLogPathFromRunRecord } from '../commands/openLastLogByTarget';
-import { getRecentRunActions, getRecentRunEntries } from '../commands/openRecentRuns';
+import { getRecentRunActions, getRecentRunEntries, prioritizeActiveTarget } from '../commands/openRecentRuns';
 import { buildConfigIssues } from '../project/configDiagnostics';
 // import * as myExtension from '../../extension';
 
@@ -532,5 +532,24 @@ suite('Extension Test Suite', () => {
 		});
 
 		assert.deepStrictEqual(actions, ['Open Waveform', 'Open Log']);
+	});
+
+	test('Recent runs helper prioritizes active target at top', () => {
+		const entries = getRecentRunEntries({
+			sim_default: {
+				targetId: 'sim_default',
+				timestamp: 200,
+				success: true
+			},
+			design_default: {
+				targetId: 'design_default',
+				timestamp: 300,
+				success: true
+			}
+		});
+
+		const prioritized = prioritizeActiveTarget(entries, 'sim_default');
+		assert.strictEqual(prioritized[0].targetId, 'sim_default');
+		assert.strictEqual(prioritized[1].targetId, 'design_default');
 	});
 });

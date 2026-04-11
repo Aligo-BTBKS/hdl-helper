@@ -458,3 +458,25 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（29 passing）。
+
+## 2026-04-11 - Iteration 4 Day 5: Active Target Prioritization in Recent Runs
+
+- 目标: 进一步提升 Recent Runs 可用性，减少在多 target 记录中手工查找成本。
+- 变更文件:
+  - src/commands/openRecentRuns.ts
+  - src/test/extension.test.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - `openRecentRuns` 增强 active target 识别：
+    - projectConfig 模式优先使用 active `TargetContext.targetId`；
+    - heuristic 模式回退 `heuristic:<simulationTop/designTop>` 键。
+  - 新增 helper `prioritizeActiveTarget`，将 active target 记录置顶。
+  - Recent Runs 列表中 active 记录增加 `[ACTIVE]` 标记。
+  - 新增最小回归测试：
+    - `Recent runs helper prioritizes active target at top`
+  - 设置指南补充“Recent Runs 会优先显示 active target 记录”说明。
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（30 passing）。
