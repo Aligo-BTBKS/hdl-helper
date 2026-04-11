@@ -20,6 +20,7 @@ import { openLastLogByTarget } from './commands/openLastLogByTarget';
 import { openRecentRuns } from './commands/openRecentRuns';
 import { openLastRunArtifactsByTarget } from './commands/openLastRunArtifactsByTarget';
 import { openRunRecordArtifacts } from './commands/openRunRecordArtifacts';
+import { rerunTargetRun, resolveTargetIdFromRerunArg } from './commands/rerunTargetRun';
 import { debugDualHierarchyState } from './commands/debugDualHierarchyState';
 import { openDualHierarchyRegressionChecklist } from './commands/openDualHierarchyRegressionChecklist';
 import { openProjectConfigFromWorkspace } from './commands/openProjectConfig';
@@ -320,6 +321,11 @@ export function activate(context: vscode.ExtensionContext) {
                 detail: 'Diagnostics'
             },
             {
+                label: 'Rerun Active Target',
+                description: 'Run simulation again for active target run record',
+                detail: 'Action'
+            },
+            {
                 label: 'Open Run Record Artifacts',
                 description: 'Open waveform/log for a selected target record',
                 detail: 'Diagnostics'
@@ -404,6 +410,10 @@ export function activate(context: vscode.ExtensionContext) {
             await vscode.commands.executeCommand('hdl-helper.openLastRunArtifactsByTarget');
             return;
         }
+        if (action.label === 'Rerun Active Target') {
+            await vscode.commands.executeCommand('hdl-helper.rerunTargetRun');
+            return;
+        }
         if (action.label === 'Open Run Record Artifacts') {
             await vscode.commands.executeCommand('hdl-helper.openRecentRuns');
         }
@@ -480,6 +490,11 @@ export function activate(context: vscode.ExtensionContext) {
                 label: '[Action] Open Last Run Artifacts (Active Target)',
                 description: 'One-click reopen waveform/log for the active target run',
                 command: 'hdl-helper.openLastRunArtifactsByTarget'
+            },
+            {
+                label: '[Action] Rerun Active Target',
+                description: 'Run simulation again for active target run record',
+                command: 'hdl-helper.rerunTargetRun'
             }
         ], {
             placeHolder: 'Hierarchy Tools (Settings / Diagnostics / Action)'
@@ -808,6 +823,11 @@ export function activate(context: vscode.ExtensionContext) {
         await openRunRecordArtifacts(stateService, targetId);
     }));
 
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.rerunTargetRun', async (arg?: unknown) => {
+        const targetId = resolveTargetIdFromRerunArg(arg);
+        await rerunTargetRun(stateService, targetId);
+    }));
+
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.runSimulation', async (moduleName: string, sourceUri?: vscode.Uri) => {
         if (!moduleName || typeof moduleName !== 'string') {
             vscode.window.showErrorMessage('No module selected for simulation.');
@@ -877,6 +897,7 @@ export function activate(context: vscode.ExtensionContext) {
 
             await stateService.setLastRunForTarget(targetId, {
                 targetId,
+                top: task.top,
                 taskName: task.name,
                 timestamp: Date.now(),
                 success: runResult.success,

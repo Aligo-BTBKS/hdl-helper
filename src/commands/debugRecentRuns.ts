@@ -14,6 +14,7 @@ export function formatRunRecords(records: Record<string, RunRecord>): string[] {
         lines.push(`Target: ${targetId}`);
         lines.push(`  Success: ${record.success}`);
         lines.push(`  Timestamp: ${new Date(record.timestamp).toISOString()}`);
+        lines.push(`  Top: ${record.top || 'n/a'}`);
         lines.push(`  Task: ${record.taskName || 'n/a'}`);
         lines.push(`  BuildDir: ${record.buildDir || 'n/a'}`);
         lines.push(`  Waveform: ${record.waveformPath || 'n/a'}`);

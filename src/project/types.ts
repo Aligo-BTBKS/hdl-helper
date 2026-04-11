@@ -197,6 +197,7 @@ export interface WorkbenchState {
  */
 export interface RunRecord {
     targetId: string;
+    top?: string;
     taskName?: string;
     timestamp: number;
     success: boolean;

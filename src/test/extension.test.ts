@@ -28,6 +28,7 @@ import { getLogPathFromRunRecord } from '../commands/openLastLogByTarget';
 import { getRecentRunActions, getRecentRunEntries, prioritizeActiveTarget } from '../commands/openRecentRuns';
 import { getAvailableArtifactActions, getMissingArtifactReasons } from '../commands/openLastRunArtifactsByTarget';
 import { pickRunRecordByTarget } from '../commands/openRunRecordArtifacts';
+import { resolveRerunTop, resolveTargetIdFromRerunArg } from '../commands/rerunTargetRun';
 import { buildConfigIssues } from '../project/configDiagnostics';
 // import * as myExtension from '../../extension';
 
@@ -460,6 +461,7 @@ suite('Extension Test Suite', () => {
 		const lines = formatRunRecords({
 			sim_default: {
 				targetId: 'sim_default',
+				top: 'tb_top',
 				timestamp: 1000,
 				success: true,
 				taskName: 'Simulate tb_top',
@@ -470,7 +472,49 @@ suite('Extension Test Suite', () => {
 
 		assert.ok(lines.some(line => line.includes('Target: sim_default')));
 		assert.ok(lines.some(line => line.includes('Success: true')));
+		assert.ok(lines.some(line => line.includes('Top: tb_top')));
 		assert.ok(lines.some(line => line.includes('Waveform: C:/repo/build/tb_top.fst')));
+	});
+
+	test('Rerun top resolver prefers explicit top field', () => {
+		const top = resolveRerunTop({
+			targetId: 'sim_default',
+			timestamp: 123,
+			success: true,
+			top: 'tb_top',
+			taskName: 'Simulate ignored_top'
+		});
+
+		assert.strictEqual(top, 'tb_top');
+	});
+
+	test('Rerun top resolver falls back to simulate task name', () => {
+		const top = resolveRerunTop({
+			targetId: 'sim_default',
+			timestamp: 123,
+			success: true,
+			taskName: 'Simulate tb_counter'
+		});
+
+		assert.strictEqual(top, 'tb_counter');
+	});
+
+	test('Rerun top resolver returns undefined when no top info exists', () => {
+		const top = resolveRerunTop({
+			targetId: 'sim_default',
+			timestamp: 123,
+			success: true,
+			taskName: 'Build tb_counter'
+		});
+
+		assert.strictEqual(top, undefined);
+	});
+
+	test('Rerun target arg resolver supports string and object arg', () => {
+		assert.strictEqual(resolveTargetIdFromRerunArg('sim_default'), 'sim_default');
+		assert.strictEqual(resolveTargetIdFromRerunArg({ targetId: 'design_default' }), 'design_default');
+		assert.strictEqual(resolveTargetIdFromRerunArg({ targetId: '   ' }), undefined);
+		assert.strictEqual(resolveTargetIdFromRerunArg(undefined), undefined);
 	});
 
 	test('Pick run record helper returns undefined when target id is missing', () => {

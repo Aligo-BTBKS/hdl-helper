@@ -246,6 +246,12 @@
         "title": "HDL: Open Run Record Artifacts",
         "category": "HDL Helper",
         "icon": "$(symbol-event)"
+      },
+      {
+        "command": "hdl-helper.rerunTargetRun",
+        "title": "HDL: Rerun Active Target",
+        "category": "HDL Helper",
+        "icon": "$(debug-rerun)"
       }
     ],
     "configuration": {
@@ -643,6 +649,11 @@
           "command": "hdl-helper.revealSourceFileInExplorer",
           "when": "view == hdl-hierarchy-view && viewItem =~ /^sources-file\\./",
           "group": "navigation@2"
+        },
+        {
+          "command": "hdl-helper.rerunTargetRun",
+          "when": "view == hdl-hierarchy-view && viewItem == run-record",
+          "group": "inline@1"
         },
         {
           "command": "hdl-helper.copyInstantiation",

@@ -540,3 +540,40 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（35 passing）。
+
+## 2026-04-11 - Iteration 4 Day 8: Rerun Active Target and Run Record
+
+- 目标: 继续推进 Iteration 4，补齐最近运行记录的重跑能力（active target 重跑 + 指定记录重跑）。
+- 变更文件:
+  - src/project/types.ts
+  - src/commands/debugRecentRuns.ts
+  - src/commands/rerunTargetRun.ts
+  - src/extension.ts
+  - src/test/extension.test.ts
+  - package.json
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - `RunRecord` 新增 `top?: string`，`runSimulation` 写入 run record 时同步记录执行 top。
+  - `HDL: Debug Recent Runs By Target` 输出新增 `Top` 字段，便于定位重跑输入。
+  - 新增命令 `HDL: Rerun Active Target`：
+    - 默认解析 active target 对应的 run record 并重跑；
+    - 支持从 `Tasks and Runs` 记录项右键传入目标，实现“按指定记录重跑”。
+  - 新增 helper：
+    - `resolveRerunTop`（优先 record.top，回退解析 `Simulate <top>` taskName）
+    - `resolveTargetIdFromRerunArg`（兼容 string/object 命令参数）
+  - 入口接入：
+    - Command Palette
+    - `HDL: Quick Actions`
+    - `HDL: Open Hierarchy Tools`
+    - `Tasks and Runs` 记录项右键菜单（`viewItem == run-record`）
+  - 新增最小回归测试：
+    - `Rerun top resolver prefers explicit top field`
+    - `Rerun top resolver falls back to simulate task name`
+    - `Rerun top resolver returns undefined when no top info exists`
+    - `Rerun target arg resolver supports string and object arg`
+  - 同步增强 existing test：`Recent runs formatter includes target and success fields` 增加 Top 字段断言。
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（39 passing）。

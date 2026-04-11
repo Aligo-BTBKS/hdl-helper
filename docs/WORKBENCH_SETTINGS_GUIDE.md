@@ -34,6 +34,8 @@ This guide lists workbench-related settings that can be configured directly in V
 - Quick Actions: `HDL: Quick Actions` -> `Open Recent Runs`
 - Command Palette: `HDL: Open Last Run Artifacts (Active Target)`
 - Quick Actions: `HDL: Quick Actions` -> `Open Last Run Artifacts (Active Target)`
+- Command Palette: `HDL: Rerun Active Target`
+- Quick Actions: `HDL: Quick Actions` -> `Rerun Active Target`
 - Command Palette: `HDL: Open Dual Hierarchy Regression Checklist`
 - Quick Actions: `HDL: Quick Actions` -> `Open Dual Hierarchy Regression Checklist`
 
@@ -53,6 +55,7 @@ This guide lists workbench-related settings that can be configured directly in V
   - Open Last Log (Active Target)
   - Open Recent Runs
   - Open Last Run Artifacts (Active Target)
+  - Rerun Active Target
   - Clear Top Module
 - In `Hierarchy Tools`, entries are grouped with prefixes for faster scanning:
   - `[Settings] ...`
@@ -87,7 +90,9 @@ This guide lists workbench-related settings that can be configured directly in V
   - Use `HDL: Open Last Log (Active Target)` to reopen latest run log by active target context.
   - Use `HDL: Open Recent Runs` to browse recent run records and open waveform/log interactively (active target record is prioritized and marked).
   - Use `HDL: Open Last Run Artifacts (Active Target)` for one-step reopen of the newest available artifact in active target run context.
+  - Use `HDL: Rerun Active Target` to rerun simulation with the latest top from the active target run record.
   - In `Tasks and Runs`, click a run record item to open artifacts for that target record.
+  - In `Tasks and Runs`, right-click a run record and run `HDL: Rerun Active Target` to rerun that specific target record directly.
 
 ## Sources View UI Behavior Settings
 
