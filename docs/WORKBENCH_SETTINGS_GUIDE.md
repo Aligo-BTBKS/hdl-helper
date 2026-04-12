@@ -203,6 +203,12 @@ This guide lists workbench-related settings that can be configured directly in V
   - In `Simulation Tasks`, click a task item (or right-click and run `HDL: Run Simulation Task Item`) to trigger simulation for that task top.
   - Use `HDL: Debug Recent Runs By Target` to inspect current stored run records.
   - Use `HDL: Debug Toolchain Health By Profile` to probe configured tool executables and store per-profile health snapshots in workspace state.
+  - Toolchain probe set is now profile-aware:
+    - `iverilog` / `icarus`: `iverilog`, `vvp`
+    - `xsim` / `vivado`: `vivado`, `xvlog`, `xelab`, `xsim`
+    - `verilator`: `verilator`
+    - `modelsim` / `questa`: `vlog`, `vsim`
+    - unknown/default profiles: `iverilog`, `vvp`, `verible-verilog-lint`, `verible-verilog-ls`
   - Use `HDL: Open Last Waveform (Active Target)` to reopen waveform by active target context.
   - Use `HDL: Open Last Log (Active Target)` to reopen latest run log by active target context.
   - Use `HDL: Open Recent Runs` to browse recent run records and open waveform/log interactively (active target record is prioritized and marked).

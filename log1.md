@@ -1627,3 +1627,31 @@
   - npm run -s compile: 通过。
   - npm run -s lint: 通过。
   - npm test -s: 通过（91 passing）。
+
+## 2026-04-12 - Iteration 6 Day 48: Profile-aware Toolchain Health Probes
+
+- 目标: 继续推进 Iteration 6，将 Toolchain Health 从“统一探测集”升级为“按 profile 选择必需工具”，提升 degraded 状态的准确性与可操作性。
+- 变更文件:
+  - src/commands/debugToolchainHealth.ts
+  - src/test/extension.test.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - `debugToolchainHealth` 新增 profile-aware helper：
+    - `resolveToolchainProbeIdsForProfile`
+    - `selectToolchainProbesForProfile`
+  - profile -> probe 规则：
+    - `iverilog/icarus`: `iverilog`, `vvp`
+    - `xsim/vivado`: `vivado`, `xvlog`, `xelab`, `xsim`
+    - `verilator`: `verilator`
+    - `modelsim/questa`: `vlog`, `vsim`
+    - `default/unknown`: `iverilog`, `vvp`, `verible-verilog-lint`, `verible-verilog-ls`
+  - toolchain 探测命令扩展：新增 `verilator/xvlog/xelab/xsim/vivado/vlog/vsim` 基础探测项。
+  - profile 健康输出增强：显示 `checked=<required tools>`，便于快速定位该 profile 的必需工具缺口。
+  - 回归补充：
+    - profile-required probe 映射测试
+    - 缺失 required probe 的 fallback 注入测试
+- 验证:
+  - npm run -s compile: 通过。
+  - npm run -s lint: 通过。
+  - npm test -s: 通过（93 passing）。

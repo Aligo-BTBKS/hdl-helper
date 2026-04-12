@@ -13,6 +13,69 @@ export interface ToolchainProbeResult {
     available: boolean;
 }
 
+const DEFAULT_PROFILE_PROBE_IDS = ['iverilog', 'vvp', 'verible-lint', 'verible-ls'];
+
+const PROFILE_PROBE_ID_MAP: Array<{ pattern: RegExp; probeIds: string[] }> = [
+    { pattern: /^(default)$/i, probeIds: DEFAULT_PROFILE_PROBE_IDS },
+    { pattern: /(iverilog|icarus)/i, probeIds: ['iverilog', 'vvp'] },
+    { pattern: /(xsim|vivado)/i, probeIds: ['vivado', 'xvlog', 'xelab', 'xsim'] },
+    { pattern: /(verilator)/i, probeIds: ['verilator'] },
+    { pattern: /(modelsim|questa)/i, probeIds: ['vlog', 'vsim'] },
+    { pattern: /(verible)/i, probeIds: ['verible-lint', 'verible-ls'] }
+];
+
+const PROBE_FALLBACK_DEFINITIONS: Record<string, { label: string; command: string }> = {
+    'iverilog': { label: 'iverilog', command: 'iverilog' },
+    'vvp': { label: 'vvp', command: 'vvp' },
+    'verible-lint': { label: 'verible-verilog-lint', command: 'verible-verilog-lint' },
+    'verible-ls': { label: 'verible-verilog-ls', command: 'verible-verilog-ls' },
+    'verilator': { label: 'verilator', command: 'verilator' },
+    'xvlog': { label: 'xvlog', command: 'xvlog' },
+    'xelab': { label: 'xelab', command: 'xelab' },
+    'xsim': { label: 'xsim', command: 'xsim' },
+    'vivado': { label: 'vivado', command: 'vivado' },
+    'vlog': { label: 'vlog', command: 'vlog' },
+    'vsim': { label: 'vsim', command: 'vsim' }
+};
+
+export function resolveToolchainProbeIdsForProfile(profile: string): string[] {
+    const normalizedProfile = profile.trim().toLowerCase();
+    for (const entry of PROFILE_PROBE_ID_MAP) {
+        if (entry.pattern.test(normalizedProfile)) {
+            return [...entry.probeIds];
+        }
+    }
+
+    return [...DEFAULT_PROFILE_PROBE_IDS];
+}
+
+export function selectToolchainProbesForProfile(
+    profile: string,
+    probes: ToolchainProbeResult[]
+): ToolchainProbeResult[] {
+    const requiredProbeIds = resolveToolchainProbeIdsForProfile(profile);
+    const probeById = new Map(probes.map(probe => [probe.id, probe]));
+
+    return requiredProbeIds.map(probeId => {
+        const existingProbe = probeById.get(probeId);
+        if (existingProbe) {
+            return existingProbe;
+        }
+
+        const fallback = PROBE_FALLBACK_DEFINITIONS[probeId] || {
+            label: probeId,
+            command: probeId
+        };
+
+        return {
+            id: probeId,
+            label: fallback.label,
+            command: fallback.command,
+            available: false
+        };
+    });
+}
+
 export function collectToolchainProfileNames(config?: NormalizedProjectConfig): string[] {
     const names = new Set<string>(['default']);
 
@@ -120,6 +183,41 @@ export async function debugToolchainHealthByProfile(
                 id: 'verible-ls',
                 label: 'verible-verilog-ls',
                 command: config.get<string>('languageServer.path', 'verible-verilog-ls')
+            },
+            {
+                id: 'verilator',
+                label: 'verilator',
+                command: config.get<string>('linter.verilatorPath', 'verilator')
+            },
+            {
+                id: 'xvlog',
+                label: 'xvlog',
+                command: config.get<string>('linter.executablePath', 'xvlog')
+            },
+            {
+                id: 'xelab',
+                label: 'xelab',
+                command: 'xelab'
+            },
+            {
+                id: 'xsim',
+                label: 'xsim',
+                command: 'xsim'
+            },
+            {
+                id: 'vivado',
+                label: 'vivado',
+                command: 'vivado'
+            },
+            {
+                id: 'vlog',
+                label: 'vlog',
+                command: 'vlog'
+            },
+            {
+                id: 'vsim',
+                label: 'vsim',
+                command: 'vsim'
             }
         ].map(item => ({ ...item, available: false }));
 
@@ -146,10 +244,11 @@ export async function debugToolchainHealthByProfile(
 
         outputChannel.appendLine('Profile Health:');
         for (const profile of profileNames) {
-            const status = buildToolchainStatusForProfile(profile, probes);
+            const requiredProbes = selectToolchainProbesForProfile(profile, probes);
+            const status = buildToolchainStatusForProfile(profile, requiredProbes);
             await stateService.setToolchainStatus(profile, status);
             outputChannel.appendLine(
-                `  ${profile}: ${status.available ? 'ok' : 'degraded'} | missing=${status.missingTools.length > 0 ? status.missingTools.join(', ') : '(none)'}`
+                `  ${profile}: ${status.available ? 'ok' : 'degraded'} | checked=${requiredProbes.map(probe => probe.label).join(', ')} | missing=${status.missingTools.length > 0 ? status.missingTools.join(', ') : '(none)'}`
             );
         }
 

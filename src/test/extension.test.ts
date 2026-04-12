@@ -66,7 +66,9 @@ import {
 } from '../commands/runActiveTargetSimulation';
 import {
 	buildToolchainStatusForProfile,
-	collectToolchainProfileNames
+	collectToolchainProfileNames,
+	resolveToolchainProbeIdsForProfile,
+	selectToolchainProbesForProfile
 } from '../commands/debugToolchainHealth';
 import { resolveHeuristicRunTargetId, writeRunRecordForTarget } from '../simulation/runsService';
 import { buildConfigIssues } from '../project/configDiagnostics';
@@ -1544,6 +1546,24 @@ suite('Extension Test Suite', () => {
 		assert.strictEqual(status.available, false);
 		assert.deepStrictEqual(status.missingTools, ['verible-verilog-lint', 'vvp']);
 		assert.strictEqual(status.lastChecked, 1234);
+	});
+
+	test('Toolchain probe resolver maps profile-specific required probe ids', () => {
+		assert.deepStrictEqual(resolveToolchainProbeIdsForProfile('xsim'), ['vivado', 'xvlog', 'xelab', 'xsim']);
+		assert.deepStrictEqual(resolveToolchainProbeIdsForProfile('iverilog'), ['iverilog', 'vvp']);
+		assert.deepStrictEqual(resolveToolchainProbeIdsForProfile('questa'), ['vlog', 'vsim']);
+		assert.deepStrictEqual(resolveToolchainProbeIdsForProfile('unknown-profile'), ['iverilog', 'vvp', 'verible-lint', 'verible-ls']);
+	});
+
+	test('Toolchain probe selector injects unavailable fallback probes for required ids', () => {
+		const selected = selectToolchainProbesForProfile('xsim', [
+			{ id: 'vivado', label: 'vivado', command: 'vivado', available: true },
+			{ id: 'xvlog', label: 'xvlog', command: 'xvlog', available: true }
+		]);
+
+		assert.deepStrictEqual(selected.map(probe => probe.id), ['vivado', 'xvlog', 'xelab', 'xsim']);
+		assert.strictEqual(selected[2].available, false);
+		assert.strictEqual(selected[3].available, false);
 	});
 
 	test('Toolchain diagnostics builder returns info entry when no snapshot exists', () => {
