@@ -415,6 +415,7 @@ suite('Extension Test Suite', () => {
 	});
 
 	test('Classification preset arg resolver supports string and object payloads', () => {
+		assert.strictEqual(resolveClassificationDebugPresetArg(' ALL '), 'all');
 		assert.strictEqual(resolveClassificationDebugPresetArg('overview'), 'overview');
 		assert.strictEqual(resolveClassificationDebugPresetArg('DETAILS'), 'details');
 		assert.strictEqual(resolveClassificationDebugPresetArg({ preset: 'all' }), 'all');

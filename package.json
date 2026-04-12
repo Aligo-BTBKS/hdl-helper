@@ -53,6 +53,12 @@
         "icon": "$(preview)"
       },
       {
+        "command": "hdl-helper.debugProjectClassificationAll",
+        "title": "HDL: Debug Project Classification (All)",
+        "category": "HDL Helper",
+        "icon": "$(list-flat)"
+      },
+      {
         "command": "hdl-helper.debugProjectClassificationOverview",
         "title": "HDL: Debug Project Classification (Overview)",
         "category": "HDL Helper",
@@ -640,14 +646,19 @@
           "group": "navigation@3"
         },
         {
-          "command": "hdl-helper.debugProjectClassificationOverview",
+          "command": "hdl-helper.debugProjectClassificationAll",
           "when": "view == hdl-hierarchy-view",
           "group": "navigation@4"
         },
         {
-          "command": "hdl-helper.debugProjectClassificationDetails",
+          "command": "hdl-helper.debugProjectClassificationOverview",
           "when": "view == hdl-hierarchy-view",
           "group": "navigation@5"
+        },
+        {
+          "command": "hdl-helper.debugProjectClassificationDetails",
+          "when": "view == hdl-hierarchy-view",
+          "group": "navigation@6"
         },
         {
           "command": "hdl-helper.runSimulationFromHierarchy",
@@ -727,14 +738,19 @@
           "group": "inline@1"
         },
         {
-          "command": "hdl-helper.debugProjectClassificationOverview",
+          "command": "hdl-helper.debugProjectClassificationAll",
           "when": "view == hdl-hierarchy-view && viewItem == diagnostics-root",
           "group": "inline@1"
         },
         {
-          "command": "hdl-helper.debugProjectClassificationDetails",
+          "command": "hdl-helper.debugProjectClassificationOverview",
           "when": "view == hdl-hierarchy-view && viewItem == diagnostics-root",
           "group": "inline@2"
+        },
+        {
+          "command": "hdl-helper.debugProjectClassificationDetails",
+          "when": "view == hdl-hierarchy-view && viewItem == diagnostics-root",
+          "group": "inline@3"
         },
         {
           "command": "hdl-helper.copyInstantiation",

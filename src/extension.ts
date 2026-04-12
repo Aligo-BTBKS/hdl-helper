@@ -335,6 +335,11 @@ export function activate(context: vscode.ExtensionContext) {
                 detail: 'Diagnostics'
             },
             {
+                label: 'Debug Project Classification (All)',
+                description: 'Run classification debug with all sections preset',
+                detail: 'Diagnostics'
+            },
+            {
                 label: 'Debug Project Classification (Overview)',
                 description: 'Run classification debug with overview preset',
                 detail: 'Diagnostics'
@@ -454,6 +459,10 @@ export function activate(context: vscode.ExtensionContext) {
             await vscode.commands.executeCommand('hdl-helper.debugProjectClassificationView');
             return;
         }
+        if (action.label === 'Debug Project Classification (All)') {
+            await vscode.commands.executeCommand('hdl-helper.debugProjectClassificationAll');
+            return;
+        }
         if (action.label === 'Debug Project Classification (Overview)') {
             await vscode.commands.executeCommand('hdl-helper.debugProjectClassificationOverview');
             return;
@@ -544,6 +553,11 @@ export function activate(context: vscode.ExtensionContext) {
                 label: '[Diagnostics] Debug Project Classification (View...)',
                 description: 'Run classification debug with all/overview/details preset',
                 command: 'hdl-helper.debugProjectClassificationView'
+            },
+            {
+                label: '[Diagnostics] Debug Project Classification (All)',
+                description: 'Run classification debug with all sections preset',
+                command: 'hdl-helper.debugProjectClassificationAll'
             },
             {
                 label: '[Diagnostics] Debug Project Classification (Overview)',
@@ -1199,6 +1213,10 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.debugProjectClassificationOverview', async () => {
         await vscode.commands.executeCommand('hdl-helper.debugProjectClassificationView', 'overview');
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.debugProjectClassificationAll', async () => {
+        await vscode.commands.executeCommand('hdl-helper.debugProjectClassificationView', 'all');
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.debugProjectClassificationDetails', async () => {

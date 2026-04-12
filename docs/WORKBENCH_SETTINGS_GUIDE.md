@@ -28,6 +28,8 @@ This guide lists workbench-related settings that can be configured directly in V
 - Quick Actions: `HDL: Quick Actions` -> `Debug Current Project Classification`
 - Command Palette: `HDL: Debug Project Classification (View...)`
 - Quick Actions: `HDL: Quick Actions` -> `Debug Project Classification (View...)`
+- Command Palette: `HDL: Debug Project Classification (All)`
+- Quick Actions: `HDL: Quick Actions` -> `Debug Project Classification (All)`
 - Command Palette: `HDL: Debug Project Classification (Overview)`
 - Quick Actions: `HDL: Quick Actions` -> `Debug Project Classification (Overview)`
 - Command Palette: `HDL: Debug Project Classification (Details)`
@@ -109,11 +111,12 @@ This guide lists workbench-related settings that can be configured directly in V
     - `Details Only`
   - The same command can be invoked programmatically with a preset argument (for automation/buttons), e.g. `overview` / `details` / `all`.
   - Alias commands are also available for direct invocation without arguments:
+    - `HDL: Debug Project Classification (All)`
     - `HDL: Debug Project Classification (Overview)`
     - `HDL: Debug Project Classification (Details)`
   - Fast-path UI entries:
-    - HDL Explorer title bar: direct Overview/Details commands
-    - Diagnostics root context menu: direct Overview/Details commands
+    - HDL Explorer title bar: direct All/Overview/Details commands
+    - Diagnostics root context menu: direct All/Overview/Details commands
 
 - `hdl-helper.targetDrivenRuns.enabled`
   - Enable target-oriented run management.

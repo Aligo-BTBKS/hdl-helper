@@ -1117,3 +1117,25 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（71 passing）。
+
+## 2026-04-12 - Iteration 5 Day 30: All Preset Alias and Tri-Mode Fast Paths
+
+- 目标: 继续推进分类调试可达性，把 all preset 也做成与 overview/details 一致的别名命令与快捷入口。
+- 变更文件:
+  - src/extension.ts
+  - package.json
+  - src/test/extension.test.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - 新增别名命令：
+    - `hdl-helper.debugProjectClassificationAll`
+  - 新增命令行为：
+    - All 别名直接调用 `debugProjectClassificationView` 并传入 `all`
+  - Quick Actions 与 Hierarchy Tools 新增 `Debug Project Classification (All)`。
+  - `view/title` 与 Diagnostics root 右键菜单新增 All 快捷入口，形成 `All/Overview/Details` 三态直达。
+  - 回归补充：preset 参数解析新增空白与大小写容错断言（`' ALL '` -> `all`）。
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（71 passing）。
