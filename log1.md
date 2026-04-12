@@ -847,3 +847,26 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（55 passing）。
+
+## 2026-04-12 - Iteration 5 Day 18: SourceSetService Foundation
+
+- 目标: 进入 Iteration 5，落地 first-class SourceSet 解析服务，并让 TargetContext 复用统一解析入口。
+- 变更文件:
+  - src/project/sourceSetService.ts
+  - src/project/targetContextService.ts
+  - src/test/extension.test.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - 新增 `SourceSetService`：
+    - `resolveSourceSetFiles(setName)`
+    - `resolveFilesForSourceSets(sourceSetNames)`
+    - `updateProjectConfig(...)` 与缓存刷新
+  - `TargetContextService.resolveFiles` 改为委托 `SourceSetService`，移除重复的文件扫描与 glob 解析实现。
+  - 新增最小回归测试：
+    - `Source set service resolves deterministic union with shared files`
+    - `Source set service refreshes cache after config update`
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（57 passing）。

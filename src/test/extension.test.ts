@@ -8,10 +8,11 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { FilelistParser } from '../project/filelistParser';
 import { ClassificationService } from '../project/classificationService';
-import { ProjectConfigStatus, Role, TargetKind } from '../project/types';
+import { NormalizedProjectConfig, ProjectConfigStatus, Role, TargetKind } from '../project/types';
 import { getLatestLogEntries, getLatestWaveformEntries, HdlTreeProvider, prioritizeTargetEntries } from '../project/hdlTreeProvider';
 import { HdlInstance, HdlModule, HdlPort } from '../project/hdlSymbol';
 import { mapLegacyTopSelection } from '../project/topSelectionPolicy';
+import { SourceSetService } from '../project/sourceSetService';
 import { TargetContextService } from '../project/targetContextService';
 import {
 	getDualHierarchyChecklistPath,
@@ -376,6 +377,104 @@ suite('Extension Test Suite', () => {
 		const simContext = service.resolveTargetContext('sim_default');
 		assert.ok(simContext?.resolvedFiles.includes(path.normalize(dutPath)));
 		assert.ok(simContext?.resolvedFiles.includes(path.normalize(tbPath)));
+
+		fs.rmSync(tempRoot, { recursive: true, force: true });
+	});
+
+	test('Source set service resolves deterministic union with shared files', () => {
+		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hdl-helper-source-set-union-'));
+		const rtlDir = path.join(tempRoot, 'rtl');
+		const tbDir = path.join(tempRoot, 'tb');
+		const sharedDir = path.join(tempRoot, 'shared');
+		fs.mkdirSync(rtlDir, { recursive: true });
+		fs.mkdirSync(tbDir, { recursive: true });
+		fs.mkdirSync(sharedDir, { recursive: true });
+
+		const dutPath = path.join(rtlDir, 'dut.sv');
+		const tbPath = path.join(tbDir, 'tb_top.sv');
+		const sharedPath = path.join(sharedDir, 'common_pkg.sv');
+		fs.writeFileSync(dutPath, 'module dut; endmodule\n', 'utf8');
+		fs.writeFileSync(tbPath, 'module tb_top; endmodule\n', 'utf8');
+		fs.writeFileSync(sharedPath, 'package common_pkg; endpackage\n', 'utf8');
+
+		const projectConfig: NormalizedProjectConfig = {
+			version: '1.0',
+			name: 'repo',
+			root: tempRoot,
+			sourceSets: {
+				design: {
+					name: 'design',
+					role: Role.Design,
+					includes: ['rtl/**/*.sv', 'shared/**/*.sv']
+				},
+				simulation: {
+					name: 'simulation',
+					role: Role.Simulation,
+					includes: ['tb/**/*.sv', 'shared/**/*.sv']
+				}
+			},
+			tops: {},
+			targets: {}
+		};
+
+		const service = new SourceSetService(tempRoot, projectConfig);
+		const resolved = service.resolveFilesForSourceSets(['simulation', 'design']);
+
+		assert.strictEqual(resolved.length, 3);
+		assert.deepStrictEqual(resolved, [...resolved].sort((a, b) => a.localeCompare(b)));
+		assert.ok(resolved.includes(path.normalize(dutPath)));
+		assert.ok(resolved.includes(path.normalize(tbPath)));
+		assert.ok(resolved.includes(path.normalize(sharedPath)));
+
+		fs.rmSync(tempRoot, { recursive: true, force: true });
+	});
+
+	test('Source set service refreshes cache after config update', () => {
+		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hdl-helper-source-set-update-'));
+		const rtlDir = path.join(tempRoot, 'rtl');
+		fs.mkdirSync(rtlDir, { recursive: true });
+
+		const keepPath = path.join(rtlDir, 'keep.sv');
+		const skipPath = path.join(rtlDir, 'skip.sv');
+		fs.writeFileSync(keepPath, 'module keep; endmodule\n', 'utf8');
+		fs.writeFileSync(skipPath, 'module skip; endmodule\n', 'utf8');
+
+		const baseConfig: NormalizedProjectConfig = {
+			version: '1.0',
+			name: 'repo',
+			root: tempRoot,
+			sourceSets: {
+				design: {
+					name: 'design',
+					role: Role.Design,
+					includes: ['rtl/**/*.sv']
+				}
+			},
+			tops: {},
+			targets: {}
+		};
+
+		const updatedConfig: NormalizedProjectConfig = {
+			...baseConfig,
+			sourceSets: {
+				design: {
+					name: 'design',
+					role: Role.Design,
+					includes: ['rtl/**/*.sv'],
+					excludes: ['rtl/skip.sv']
+				}
+			}
+		};
+
+		const service = new SourceSetService(tempRoot, baseConfig);
+		const first = service.resolveSourceSetFiles('design');
+		assert.strictEqual(first.length, 2);
+
+		service.updateProjectConfig(updatedConfig);
+		const second = service.resolveSourceSetFiles('design');
+		assert.strictEqual(second.length, 1);
+		assert.ok(second.includes(path.normalize(keepPath)));
+		assert.ok(!second.includes(path.normalize(skipPath)));
 
 		fs.rmSync(tempRoot, { recursive: true, force: true });
 	});
