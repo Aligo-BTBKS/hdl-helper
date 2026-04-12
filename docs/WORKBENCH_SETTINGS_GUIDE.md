@@ -40,6 +40,10 @@ This guide lists workbench-related settings that can be configured directly in V
 - Quick Actions: `HDL: Quick Actions` -> `Inspect Project Classification Summary (Project Config)`
 - Command Palette: `HDL: Inspect Project Classification Summary (Heuristic)`
 - Quick Actions: `HDL: Quick Actions` -> `Inspect Project Classification Summary (Heuristic)`
+- Command Palette: `HDL: Inspect Project Classification Summary (Compact)`
+- Quick Actions: `HDL: Quick Actions` -> `Inspect Project Classification Summary (Compact)`
+- Command Palette: `HDL: Inspect Project Classification Summary (Expanded)`
+- Quick Actions: `HDL: Quick Actions` -> `Inspect Project Classification Summary (Expanded)`
 - Quick Actions: `HDL: Quick Actions` -> `Inspect Project Classification (Active Files)`
 - Quick Actions: `HDL: Quick Actions` -> `Inspect Project Classification (Shared Files)`
 - Command Palette: `HDL: Debug Project Classification (All)`
@@ -95,6 +99,8 @@ This guide lists workbench-related settings that can be configured directly in V
   - Inspect Project Classification Summary (Shared)
   - Inspect Project Classification Summary (Project Config)
   - Inspect Project Classification Summary (Heuristic)
+  - Inspect Project Classification Summary (Compact)
+  - Inspect Project Classification Summary (Expanded)
   - Inspect Project Classification (Active Files)
   - Inspect Project Classification (Shared Files)
   - Clear Top Module
@@ -155,7 +161,13 @@ This guide lists workbench-related settings that can be configured directly in V
     - `HDL: Inspect Project Classification Summary (Shared)`
     - `HDL: Inspect Project Classification Summary (Project Config)`
     - `HDL: Inspect Project Classification Summary (Heuristic)`
+    - `HDL: Inspect Project Classification Summary (Compact)`
+    - `HDL: Inspect Project Classification Summary (Expanded)`
   - Programmatic calls can pass scope via command argument object/string, for example: `active` / `{ scope: 'shared' }`.
+  - Programmatic calls can also override top-file preview limit via args, for example:
+    - `12`
+    - `{ scope: 'active', topFileLimit: 12 }`
+    - `{ profile: 'compact' }` / `{ profile: 'expanded' }`
   - The same command can be invoked programmatically with a preset argument (for automation/buttons), e.g. `overview` / `details` / `all`.
   - Alias commands are also available for direct invocation without arguments:
     - `HDL: Debug Project Classification (All)`

@@ -89,6 +89,18 @@
         "icon": "$(beaker)"
       },
       {
+        "command": "hdl-helper.inspectProjectClassificationSummaryCompact",
+        "title": "HDL: Inspect Project Classification Summary (Compact)",
+        "category": "HDL Helper",
+        "icon": "$(list-selection)"
+      },
+      {
+        "command": "hdl-helper.inspectProjectClassificationSummaryExpanded",
+        "title": "HDL: Inspect Project Classification Summary (Expanded)",
+        "category": "HDL Helper",
+        "icon": "$(list-tree)"
+      },
+      {
         "command": "hdl-helper.debugProjectClassificationAll",
         "title": "HDL: Debug Project Classification (All)",
         "category": "HDL Helper",
@@ -740,6 +752,16 @@
           "group": "navigation@12"
         },
         {
+          "command": "hdl-helper.inspectProjectClassificationSummaryCompact",
+          "when": "view == hdl-hierarchy-view",
+          "group": "navigation@13"
+        },
+        {
+          "command": "hdl-helper.inspectProjectClassificationSummaryExpanded",
+          "when": "view == hdl-hierarchy-view",
+          "group": "navigation@14"
+        },
+        {
           "command": "hdl-helper.runSimulationFromHierarchy",
           "when": "view == hdl-hierarchy-view",
           "group": "navigation@1"
@@ -860,6 +882,16 @@
           "command": "hdl-helper.inspectProjectClassificationSummaryHeuristic",
           "when": "view == hdl-hierarchy-view && viewItem == diagnostics-root",
           "group": "inline@9"
+        },
+        {
+          "command": "hdl-helper.inspectProjectClassificationSummaryCompact",
+          "when": "view == hdl-hierarchy-view && viewItem == diagnostics-root",
+          "group": "inline@10"
+        },
+        {
+          "command": "hdl-helper.inspectProjectClassificationSummaryExpanded",
+          "when": "view == hdl-hierarchy-view && viewItem == diagnostics-root",
+          "group": "inline@11"
         },
         {
           "command": "hdl-helper.copyInstantiation",

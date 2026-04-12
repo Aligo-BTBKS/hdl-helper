@@ -1392,3 +1392,37 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（78 passing）。
+
+## 2026-04-12 - Iteration 5 Day 40: Summary Density Presets and Arg Overrides
+
+- 目标: 继续推进 Iteration 5.5 inspector 可操作性，让 summary 视图支持密度预设与参数化 top-file limit 覆盖，减少频繁改设置的操作成本。
+- 变更文件:
+  - src/commands/debugProjectClassification.ts
+  - src/extension.ts
+  - package.json
+  - src/test/extension.test.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - 新增 summary 参数解析 helper：
+    - `resolveClassificationInspectorSummaryArg`
+  - `inspectProjectClassificationSummary` 支持从命令参数解析：
+    - `scope` 预设（沿用现有 scope 解析）
+    - `topFileLimit` 覆盖（支持数值/字符串数值）
+    - `profile` 预设（`compact` / `expanded`）
+  - 新增别名命令：
+    - `hdl-helper.inspectProjectClassificationSummaryCompact`
+    - `hdl-helper.inspectProjectClassificationSummaryExpanded`
+  - 快速入口接线：
+    - Quick Actions
+    - Hierarchy Tools
+    - Command Palette
+    - HDL Explorer title bar
+    - Diagnostics root 右键菜单
+  - 回归补充：
+    - summary 参数解析（scope + top-file limit/profile）测试
+    - summary 显式 limit 覆盖输出测试
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（80 passing）。

@@ -14,7 +14,9 @@ import { generateMemoryCommand } from './commands/generateMemory';
 import { generateRegistersCommand } from './commands/generateRegisters';
 import {
     buildClassificationRenderOptionsByPreset,
+    COMPACT_CLASSIFICATION_INSPECTOR_TOP_FILE_LIMIT,
     debugProjectClassification,
+    EXPANDED_CLASSIFICATION_INSPECTOR_TOP_FILE_LIMIT,
     inspectProjectClassification,
     inspectProjectClassificationSummary,
     normalizeClassificationInspectorTopFileLimit,
@@ -373,6 +375,16 @@ export function activate(context: vscode.ExtensionContext) {
                 detail: 'Diagnostics'
             },
             {
+                label: 'Inspect Project Classification Summary (Compact)',
+                description: 'Inspect summary with compact top-file preview density',
+                detail: 'Diagnostics'
+            },
+            {
+                label: 'Inspect Project Classification Summary (Expanded)',
+                description: 'Inspect summary with expanded top-file preview density',
+                detail: 'Diagnostics'
+            },
+            {
                 label: 'Inspect Project Classification (Active Files)',
                 description: 'Inspect files scoped to active target context',
                 detail: 'Diagnostics'
@@ -535,6 +547,14 @@ export function activate(context: vscode.ExtensionContext) {
             await vscode.commands.executeCommand('hdl-helper.inspectProjectClassificationSummaryHeuristic');
             return;
         }
+        if (action.label === 'Inspect Project Classification Summary (Compact)') {
+            await vscode.commands.executeCommand('hdl-helper.inspectProjectClassificationSummaryCompact');
+            return;
+        }
+        if (action.label === 'Inspect Project Classification Summary (Expanded)') {
+            await vscode.commands.executeCommand('hdl-helper.inspectProjectClassificationSummaryExpanded');
+            return;
+        }
         if (action.label === 'Inspect Project Classification (Active Files)') {
             await vscode.commands.executeCommand('hdl-helper.inspectProjectClassification', 'active');
             return;
@@ -672,6 +692,16 @@ export function activate(context: vscode.ExtensionContext) {
                 label: '[Diagnostics] Inspect Project Classification Summary (Heuristic)',
                 description: 'Inspect aggregated counters for heuristic files',
                 command: 'hdl-helper.inspectProjectClassificationSummaryHeuristic'
+            },
+            {
+                label: '[Diagnostics] Inspect Project Classification Summary (Compact)',
+                description: 'Inspect summary with compact top-file preview density',
+                command: 'hdl-helper.inspectProjectClassificationSummaryCompact'
+            },
+            {
+                label: '[Diagnostics] Inspect Project Classification Summary (Expanded)',
+                description: 'Inspect summary with expanded top-file preview density',
+                command: 'hdl-helper.inspectProjectClassificationSummaryExpanded'
             },
             {
                 label: '[Diagnostics] Inspect Project Classification (Active Files)',
@@ -1385,6 +1415,20 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.inspectProjectClassificationSummaryHeuristic', async () => {
         await vscode.commands.executeCommand('hdl-helper.inspectProjectClassificationSummary', 'heuristic');
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.inspectProjectClassificationSummaryCompact', async () => {
+        await vscode.commands.executeCommand('hdl-helper.inspectProjectClassificationSummary', {
+            scope: 'all',
+            topFileLimit: COMPACT_CLASSIFICATION_INSPECTOR_TOP_FILE_LIMIT
+        });
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.inspectProjectClassificationSummaryExpanded', async () => {
+        await vscode.commands.executeCommand('hdl-helper.inspectProjectClassificationSummary', {
+            scope: 'all',
+            topFileLimit: EXPANDED_CLASSIFICATION_INSPECTOR_TOP_FILE_LIMIT
+        });
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.debugProjectClassificationView', async (arg?: unknown) => {

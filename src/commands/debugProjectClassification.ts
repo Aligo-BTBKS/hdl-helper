@@ -53,6 +53,13 @@ const sectionPriority: Record<ClassificationDebugSectionType, number> = {
 const DEFAULT_INSPECTOR_TOP_FILE_LIMIT = 8;
 const MIN_INSPECTOR_TOP_FILE_LIMIT = 1;
 const MAX_INSPECTOR_TOP_FILE_LIMIT = 50;
+export const COMPACT_CLASSIFICATION_INSPECTOR_TOP_FILE_LIMIT = 5;
+export const EXPANDED_CLASSIFICATION_INSPECTOR_TOP_FILE_LIMIT = 20;
+
+export interface ClassificationInspectorSummaryArgResolution {
+    scopePreset?: ClassificationInspectorScopePreset;
+    topFileLimit?: number;
+}
 
 export function buildClassificationObservabilityStats(
     results: FileClassificationResult[]
@@ -625,7 +632,9 @@ export async function inspectProjectClassificationSummary(
         return;
     }
 
-    const scopePreset = await resolveOrPickClassificationInspectorScope(
+    const summaryArg = resolveClassificationInspectorSummaryArg(arg);
+
+    const scopePreset = summaryArg.scopePreset || await resolveOrPickClassificationInspectorScope(
         arg,
         'Select classification summary scope preset'
     );
@@ -640,10 +649,11 @@ export async function inspectProjectClassificationSummary(
     }
 
     const config = vscode.workspace.getConfiguration('hdl-helper', folder.uri);
-    const topFileLimit = normalizeClassificationInspectorTopFileLimit(
+    const configuredTopFileLimit = normalizeClassificationInspectorTopFileLimit(
         config.get<number>('workbench.classificationInspector.topFileLimit'),
         DEFAULT_INSPECTOR_TOP_FILE_LIMIT
     );
+    const topFileLimit = summaryArg.topFileLimit ?? configuredTopFileLimit;
 
     const topFileEntries = buildClassificationInspectorTopFilePreviewEntries(filteredResults, {
         workspaceRoot: input.workspaceRoot,
@@ -736,6 +746,79 @@ export function resolveClassificationInspectorScopeArg(
         || pickScope(candidate.preset)
         || pickScope(candidate.view)
         || pickScope(candidate.mode);
+}
+
+function resolveClassificationInspectorTopFileLimitArg(value: unknown): number | undefined {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return normalizeClassificationInspectorTopFileLimit(value, DEFAULT_INSPECTOR_TOP_FILE_LIMIT);
+    }
+
+    if (typeof value !== 'string') {
+        return undefined;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    if (!/^\d+$/.test(normalized)) {
+        return undefined;
+    }
+
+    return normalizeClassificationInspectorTopFileLimit(Number(normalized), DEFAULT_INSPECTOR_TOP_FILE_LIMIT);
+}
+
+function resolveClassificationInspectorTopFileLimitProfile(value: unknown): number | undefined {
+    if (typeof value !== 'string') {
+        return undefined;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'compact') {
+        return COMPACT_CLASSIFICATION_INSPECTOR_TOP_FILE_LIMIT;
+    }
+    if (normalized === 'expanded') {
+        return EXPANDED_CLASSIFICATION_INSPECTOR_TOP_FILE_LIMIT;
+    }
+
+    return undefined;
+}
+
+export function resolveClassificationInspectorSummaryArg(
+    arg: unknown
+): ClassificationInspectorSummaryArgResolution {
+    const directScope = resolveClassificationInspectorScopeArg(arg);
+    const directTopFileLimit = resolveClassificationInspectorTopFileLimitArg(arg)
+        ?? resolveClassificationInspectorTopFileLimitProfile(arg);
+
+    if (!arg || typeof arg !== 'object') {
+        if (!directScope && typeof directTopFileLimit !== 'number') {
+            return {};
+        }
+
+        return {
+            scopePreset: directScope,
+            topFileLimit: directTopFileLimit
+        };
+    }
+
+    const candidate = arg as {
+        scope?: unknown;
+        preset?: unknown;
+        view?: unknown;
+        mode?: unknown;
+        topFileLimit?: unknown;
+        limit?: unknown;
+        previewLimit?: unknown;
+        profile?: unknown;
+    };
+
+    return {
+        scopePreset: resolveClassificationInspectorScopeArg(candidate),
+        topFileLimit: resolveClassificationInspectorTopFileLimitArg(candidate.topFileLimit)
+            ?? resolveClassificationInspectorTopFileLimitArg(candidate.limit)
+            ?? resolveClassificationInspectorTopFileLimitArg(candidate.previewLimit)
+            ?? resolveClassificationInspectorTopFileLimitProfile(candidate.profile)
+            ?? resolveClassificationInspectorTopFileLimitProfile(candidate.view)
+            ?? resolveClassificationInspectorTopFileLimitProfile(candidate.mode)
+    };
 }
 
 function getClassificationInspectorScopePickItems(): ClassificationInspectorScopePickItem[] {

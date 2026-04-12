@@ -39,6 +39,7 @@ import {
 	getClassificationDebugSectionPriority,
 	getClassificationDebugSectionTypesByPreset,
 	resolveClassificationInspectorScopeArg,
+	resolveClassificationInspectorSummaryArg,
 	resolveClassificationDebugPresetArg,
 	renderClassificationDebugSections
 } from '../commands/debugProjectClassification';
@@ -468,6 +469,35 @@ suite('Extension Test Suite', () => {
 		assert.strictEqual(resolveClassificationInspectorScopeArg('unknown'), undefined);
 	});
 
+	test('Classification inspector summary arg resolver supports scope and top-file presets', () => {
+		const scopeOnly = resolveClassificationInspectorSummaryArg('active');
+		assert.strictEqual(scopeOnly.scopePreset, 'active');
+		assert.strictEqual(scopeOnly.topFileLimit, undefined);
+
+		const compact = resolveClassificationInspectorSummaryArg('compact');
+		assert.strictEqual(compact.scopePreset, undefined);
+		assert.strictEqual(compact.topFileLimit, 5);
+
+		const numeric = resolveClassificationInspectorSummaryArg(12);
+		assert.strictEqual(numeric.topFileLimit, 12);
+
+		const expanded = resolveClassificationInspectorSummaryArg({
+			scope: 'shared',
+			profile: 'expanded'
+		});
+		assert.strictEqual(expanded.scopePreset, 'shared');
+		assert.strictEqual(expanded.topFileLimit, 20);
+
+		const capped = resolveClassificationInspectorSummaryArg({
+			scope: 'project-config',
+			topFileLimit: 100
+		});
+		assert.strictEqual(capped.scopePreset, 'project-config');
+		assert.strictEqual(capped.topFileLimit, 50);
+
+		assert.deepStrictEqual(resolveClassificationInspectorSummaryArg('unknown'), {});
+	});
+
 	test('Classification inspector scope filter returns expected subsets', () => {
 		const results = [
 			{
@@ -568,6 +598,46 @@ suite('Extension Test Suite', () => {
 		assert.ok(lines.includes('Top Files Preview (up to 8):'));
 		assert.ok(lines.some(line => line.startsWith('  [A-] rtl/dut.sv')));
 		assert.ok(lines.some(line => line.startsWith('  [-S] shared/common_pkg.sv')));
+	});
+
+	test('Classification inspector summary lines honor explicit top-file limit', () => {
+		const results = [
+			{
+				uri: 'C:/repo/rtl/dut.sv',
+				physicalType: PhysicalFileType.SystemVerilog,
+				rolePrimary: Role.Design,
+				roleSecondary: [],
+				sourceOfTruth: SourceOfTruth.ProjectConfig,
+				inActiveTarget: true,
+				referencedBySourceSets: ['design']
+			},
+			{
+				uri: 'C:/repo/shared/common_pkg.sv',
+				physicalType: PhysicalFileType.SystemVerilog,
+				rolePrimary: Role.Design,
+				roleSecondary: [Role.Verification],
+				sourceOfTruth: SourceOfTruth.ProjectConfig,
+				inActiveTarget: false,
+				referencedBySourceSets: ['design', 'verification']
+			},
+			{
+				uri: 'C:/repo/misc/fallback.sv',
+				physicalType: PhysicalFileType.SystemVerilog,
+				rolePrimary: Role.Design,
+				roleSecondary: [],
+				sourceOfTruth: SourceOfTruth.Heuristic,
+				inActiveTarget: false,
+				referencedBySourceSets: []
+			}
+		];
+
+		const lines = buildClassificationInspectorSummaryLines(results, 'all', {
+			workspaceRoot: 'C:/repo',
+			topFileLimit: 2
+		});
+
+		assert.ok(lines.includes('Top Files Preview (up to 2):'));
+		assert.strictEqual(lines.filter(line => line.startsWith('  [')).length, 2);
 	});
 
 	test('Classification inspector top file preview keeps deterministic priority', () => {
