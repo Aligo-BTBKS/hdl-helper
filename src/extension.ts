@@ -24,6 +24,7 @@ import {
 } from './commands/debugProjectClassification';
 import { debugActiveTargetContext } from './commands/debugActiveTargetContext';
 import { debugRecentRunsByTarget } from './commands/debugRecentRuns';
+import { debugToolchainHealthByProfile } from './commands/debugToolchainHealth';
 import { openLastWaveformByTarget } from './commands/openLastWaveformByTarget';
 import { openLastLogByTarget } from './commands/openLastLogByTarget';
 import { openRecentRuns } from './commands/openRecentRuns';
@@ -340,6 +341,11 @@ export function activate(context: vscode.ExtensionContext) {
                 detail: 'Diagnostics'
             },
             {
+                label: 'Debug Toolchain Health By Profile',
+                description: 'Probe configured tools and summarize health by profile',
+                detail: 'Diagnostics'
+            },
+            {
                 label: 'Debug Project Classification (View...)',
                 description: 'Run classification debug with preset view (all/overview/details)',
                 detail: 'Diagnostics'
@@ -519,6 +525,10 @@ export function activate(context: vscode.ExtensionContext) {
             await vscode.commands.executeCommand('hdl-helper.debugRecentRunsByTarget');
             return;
         }
+        if (action.label === 'Debug Toolchain Health By Profile') {
+            await vscode.commands.executeCommand('hdl-helper.debugToolchainHealthByProfile');
+            return;
+        }
         if (action.label === 'Debug Project Classification (View...)') {
             await vscode.commands.executeCommand('hdl-helper.debugProjectClassificationView');
             return;
@@ -657,6 +667,11 @@ export function activate(context: vscode.ExtensionContext) {
                 label: '[Diagnostics] Debug Recent Runs By Target',
                 description: 'Print target-keyed run history from workspace state',
                 command: 'hdl-helper.debugRecentRunsByTarget'
+            },
+            {
+                label: '[Diagnostics] Debug Toolchain Health By Profile',
+                description: 'Probe configured tools and summarize profile health',
+                command: 'hdl-helper.debugToolchainHealthByProfile'
             },
             {
                 label: '[Diagnostics] Debug Project Classification (View...)',
@@ -1495,6 +1510,13 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.debugRecentRunsByTarget', async () => {
         await debugRecentRunsByTarget(stateService, recentRunsOutputChannel);
+    }));
+
+    const toolchainHealthOutputChannel = vscode.window.createOutputChannel('HDL Helper - Toolchain Health');
+    context.subscriptions.push(toolchainHealthOutputChannel);
+
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.debugToolchainHealthByProfile', async () => {
+        await debugToolchainHealthByProfile(toolchainHealthOutputChannel, stateService);
     }));
 
     const dualHierarchyOutputChannel = vscode.window.createOutputChannel('HDL Helper - Dual Hierarchy');

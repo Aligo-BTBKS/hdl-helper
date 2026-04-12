@@ -59,6 +59,10 @@ import {
 	resolveFallbackSimulationTop,
 	resolveRunTargetId
 } from '../commands/runActiveTargetSimulation';
+import {
+	buildToolchainStatusForProfile,
+	collectToolchainProfileNames
+} from '../commands/debugToolchainHealth';
 import { resolveHeuristicRunTargetId, writeRunRecordForTarget } from '../simulation/runsService';
 import { buildConfigIssues } from '../project/configDiagnostics';
 // import * as myExtension from '../../extension';
@@ -1351,6 +1355,61 @@ suite('Extension Test Suite', () => {
 		assert.ok(issues.some(issue => issue.message.includes("Target 'sim_empty' references missing filelist")));
 		assert.ok(issues.some(issue => issue.message.includes("Target 'sim_empty' references unknown tool profile")));
 		assert.ok(issues.some(issue => issue.message.includes("Target 'sim_missing' has 1 missing resolved file(s)")));
+	});
+
+	test('Toolchain profile collector returns sorted deduplicated profile list', () => {
+		const profiles = collectToolchainProfileNames({
+			version: '1.0',
+			name: 'repo',
+			root: 'C:/repo',
+			sourceSets: {
+				design: {
+					name: 'design',
+					role: Role.Design,
+					includes: ['rtl/**/*.sv']
+				}
+			},
+			tops: {
+				design: 'dut',
+				simulation: 'tb'
+			},
+			targets: {
+				sim_a: {
+					id: 'sim_a',
+					kind: TargetKind.Simulation,
+					sourceSets: ['design'],
+					toolProfile: 'xsim'
+				},
+				sim_b: {
+					id: 'sim_b',
+					kind: TargetKind.Simulation,
+					sourceSets: ['design'],
+					toolProfile: 'iverilog'
+				},
+				sim_c: {
+					id: 'sim_c',
+					kind: TargetKind.Simulation,
+					sourceSets: ['design'],
+					toolProfile: 'xsim'
+				}
+			},
+			activeTarget: 'sim_a'
+		});
+
+		assert.deepStrictEqual(profiles, ['default', 'iverilog', 'xsim']);
+	});
+
+	test('Toolchain status builder marks missing tools correctly', () => {
+		const status = buildToolchainStatusForProfile('xsim', [
+			{ id: 'iverilog', label: 'iverilog', command: 'iverilog', available: true },
+			{ id: 'vvp', label: 'vvp', command: 'vvp', available: false },
+			{ id: 'verible-lint', label: 'verible-verilog-lint', command: 'verible-verilog-lint', available: false }
+		], 1234);
+
+		assert.strictEqual(status.profile, 'xsim');
+		assert.strictEqual(status.available, false);
+		assert.deepStrictEqual(status.missingTools, ['verible-verilog-lint', 'vvp']);
+		assert.strictEqual(status.lastChecked, 1234);
 	});
 
 	test('Open project config helper opens existing config file', async () => {

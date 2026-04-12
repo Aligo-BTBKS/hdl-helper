@@ -1480,3 +1480,36 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（82 passing）。
+
+## 2026-04-12 - Iteration 6 Day 43: Toolchain Health by Profile
+
+- 目标: 按 Iteration 6 清单补齐 toolchain health 可观测性，提供按 profile 的可见检查入口。
+- 变更文件:
+  - src/commands/debugToolchainHealth.ts
+  - src/extension.ts
+  - src/test/extension.test.ts
+  - package.json
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - 新增命令：
+    - `hdl-helper.debugToolchainHealthByProfile`
+  - 新增 helper：
+    - `collectToolchainProfileNames`
+    - `buildToolchainStatusForProfile`
+  - 命令行为：
+    - 探测 `iverilog` / `vvp` / `verible-verilog-lint` / `verible-verilog-ls`
+    - 基于 project config 中的 `target.toolProfile` 生成 profile 列表并输出健康状态
+    - 将 profile 健康快照写入 `StateService.toolchainStatusByProfile`
+  - 入口接线：
+    - Command Palette
+    - Quick Actions
+    - Hierarchy Tools
+    - Diagnostics root 右键菜单
+  - 回归补充：
+    - profile 去重与排序测试
+    - toolchain status 缺失工具判定测试
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（84 passing）。

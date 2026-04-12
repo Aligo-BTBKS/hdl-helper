@@ -131,6 +131,12 @@
         "icon": "$(history)"
       },
       {
+        "command": "hdl-helper.debugToolchainHealthByProfile",
+        "title": "HDL: Debug Toolchain Health By Profile",
+        "category": "HDL Helper",
+        "icon": "$(pulse)"
+      },
+      {
         "command": "hdl-helper.debugDualHierarchyState",
         "title": "HDL: Debug Dual Hierarchy State",
         "category": "HDL Helper",
@@ -900,6 +906,11 @@
           "command": "hdl-helper.inspectProjectClassificationSummaryExpanded",
           "when": "view == hdl-hierarchy-view && viewItem == diagnostics-root",
           "group": "inline@11"
+        },
+        {
+          "command": "hdl-helper.debugToolchainHealthByProfile",
+          "when": "view == hdl-hierarchy-view && viewItem == diagnostics-root",
+          "group": "inline@12"
         },
         {
           "command": "hdl-helper.copyInstantiation",

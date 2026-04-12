@@ -24,6 +24,8 @@ This guide lists workbench-related settings that can be configured directly in V
 - Quick Actions: `HDL: Quick Actions` -> `Debug Active Target Context`
 - Command Palette: `HDL: Debug Recent Runs By Target`
 - Quick Actions: `HDL: Quick Actions` -> `Debug Recent Runs By Target`
+- Command Palette: `HDL: Debug Toolchain Health By Profile`
+- Quick Actions: `HDL: Quick Actions` -> `Debug Toolchain Health By Profile`
 - Command Palette: `HDL: Debug Current Project Classification`
 - Quick Actions: `HDL: Quick Actions` -> `Debug Current Project Classification`
 - Command Palette: `HDL: Debug Project Classification (View...)`
@@ -86,6 +88,7 @@ This guide lists workbench-related settings that can be configured directly in V
   - Debug Dual Hierarchy State
   - Debug Active Target Context
   - Debug Recent Runs By Target
+  - Debug Toolchain Health By Profile
   - Open Project Config
   - Open Last Waveform (Active Target)
   - Open Last Log (Active Target)
@@ -195,6 +198,7 @@ This guide lists workbench-related settings that can be configured directly in V
   - Use `HDL: Open Simulation Tasks File` to open configured simulation task file (auto-create template if missing).
   - In `Simulation Tasks`, click a task item (or right-click and run `HDL: Run Simulation Task Item`) to trigger simulation for that task top.
   - Use `HDL: Debug Recent Runs By Target` to inspect current stored run records.
+  - Use `HDL: Debug Toolchain Health By Profile` to probe configured tool executables and store per-profile health snapshots in workspace state.
   - Use `HDL: Open Last Waveform (Active Target)` to reopen waveform by active target context.
   - Use `HDL: Open Last Log (Active Target)` to reopen latest run log by active target context.
   - Use `HDL: Open Recent Runs` to browse recent run records and open waveform/log interactively (active target record is prioritized and marked).
