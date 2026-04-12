@@ -341,6 +341,16 @@ export function activate(context: vscode.ExtensionContext) {
                 detail: 'Diagnostics'
             },
             {
+                label: 'Inspect Project Classification (Active Files)',
+                description: 'Inspect files scoped to active target context',
+                detail: 'Diagnostics'
+            },
+            {
+                label: 'Inspect Project Classification (Shared Files)',
+                description: 'Inspect files referenced by multiple source roles',
+                detail: 'Diagnostics'
+            },
+            {
                 label: 'Debug Project Classification (All)',
                 description: 'Run classification debug with all sections preset',
                 detail: 'Diagnostics'
@@ -469,6 +479,14 @@ export function activate(context: vscode.ExtensionContext) {
             await vscode.commands.executeCommand('hdl-helper.inspectProjectClassification');
             return;
         }
+        if (action.label === 'Inspect Project Classification (Active Files)') {
+            await vscode.commands.executeCommand('hdl-helper.inspectProjectClassification', 'active');
+            return;
+        }
+        if (action.label === 'Inspect Project Classification (Shared Files)') {
+            await vscode.commands.executeCommand('hdl-helper.inspectProjectClassification', 'shared');
+            return;
+        }
         if (action.label === 'Debug Project Classification (All)') {
             await vscode.commands.executeCommand('hdl-helper.debugProjectClassificationAll');
             return;
@@ -570,6 +588,18 @@ export function activate(context: vscode.ExtensionContext) {
                 command: 'hdl-helper.inspectProjectClassification'
             },
             {
+                label: '[Diagnostics] Inspect Project Classification (Active Files)',
+                description: 'Inspect files scoped to active target context',
+                command: 'hdl-helper.inspectProjectClassification',
+                args: 'active'
+            },
+            {
+                label: '[Diagnostics] Inspect Project Classification (Shared Files)',
+                description: 'Inspect files referenced by multiple source roles',
+                command: 'hdl-helper.inspectProjectClassification',
+                args: 'shared'
+            },
+            {
                 label: '[Diagnostics] Debug Project Classification (All)',
                 description: 'Run classification debug with all sections preset',
                 command: 'hdl-helper.debugProjectClassificationAll'
@@ -642,7 +672,7 @@ export function activate(context: vscode.ExtensionContext) {
             return;
         }
 
-        await vscode.commands.executeCommand(picked.command);
+        await vscode.commands.executeCommand(picked.command, picked.args);
     }));
 
     // =========================================================================
@@ -1186,8 +1216,8 @@ export function activate(context: vscode.ExtensionContext) {
         await debugProjectClassification(classificationOutputChannel);
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.inspectProjectClassification', async () => {
-        await inspectProjectClassification(classificationOutputChannel);
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.inspectProjectClassification', async (arg?: unknown) => {
+        await inspectProjectClassification(classificationOutputChannel, arg);
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.debugProjectClassificationView', async (arg?: unknown) => {

@@ -30,6 +30,8 @@ This guide lists workbench-related settings that can be configured directly in V
 - Quick Actions: `HDL: Quick Actions` -> `Debug Project Classification (View...)`
 - Command Palette: `HDL: Inspect Project Classification (Pick File)`
 - Quick Actions: `HDL: Quick Actions` -> `Inspect Project Classification (Pick File)`
+- Quick Actions: `HDL: Quick Actions` -> `Inspect Project Classification (Active Files)`
+- Quick Actions: `HDL: Quick Actions` -> `Inspect Project Classification (Shared Files)`
 - Command Palette: `HDL: Debug Project Classification (All)`
 - Quick Actions: `HDL: Quick Actions` -> `Debug Project Classification (All)`
 - Command Palette: `HDL: Debug Project Classification (Overview)`
@@ -75,6 +77,8 @@ This guide lists workbench-related settings that can be configured directly in V
   - Rerun Active Target
   - Run Active Target Simulation
   - Inspect Project Classification (Pick File)
+  - Inspect Project Classification (Active Files)
+  - Inspect Project Classification (Shared Files)
   - Clear Top Module
 - In `Hierarchy Tools`, entries are grouped with prefixes for faster scanning:
   - `[Settings] ...`
@@ -112,7 +116,14 @@ This guide lists workbench-related settings that can be configured directly in V
     - `All Sections`
     - `Overview`
     - `Details Only`
-  - Use `HDL: Inspect Project Classification (Pick File)` to select a classified file interactively and inspect full metadata in the classification output channel.
+  - Use `HDL: Inspect Project Classification (Pick File)` to select scope preset and classified file interactively, then inspect full metadata in the classification output channel.
+  - Scope presets include:
+    - `all`
+    - `active`
+    - `shared`
+    - `project-config`
+    - `heuristic`
+  - Programmatic calls can pass scope via command argument object/string, for example: `active` / `{ scope: 'shared' }`.
   - The same command can be invoked programmatically with a preset argument (for automation/buttons), e.g. `overview` / `details` / `all`.
   - Alias commands are also available for direct invocation without arguments:
     - `HDL: Debug Project Classification (All)`

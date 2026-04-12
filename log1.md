@@ -1174,3 +1174,36 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（72 passing）。
+
+## 2026-04-12 - Iteration 5 Day 32: Inspector Scope Presets and Filtered Entry Paths
+
+- 目标: 继续推进 Iteration 5.5 inspector 能力，为分类检查增加 scope 预设与快速筛选入口，不涉及外部仿真后端专项。
+- 变更文件:
+  - src/commands/debugProjectClassification.ts
+  - src/extension.ts
+  - src/test/extension.test.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - `inspectProjectClassification` 支持 scope 参数与交互式 scope 选择。
+  - 新增 scope 预设：
+    - `all`
+    - `active`
+    - `shared`
+    - `project-config`
+    - `heuristic`
+  - 新增可复用 helper：
+    - `resolveClassificationInspectorScopeArg`
+    - `filterClassificationInspectorResults`
+  - Quick Actions 增加两条快速入口：
+    - `Inspect Project Classification (Active Files)`
+    - `Inspect Project Classification (Shared Files)`
+  - Hierarchy Tools 增加对应诊断入口，并支持命令参数透传（`executeCommand(command, args)`）。
+  - Inspector 输出新增 `Inspector Scope` 头信息，便于记录当前筛选上下文。
+  - 回归补充：
+    - scope 参数解析测试
+    - scope 过滤行为测试
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（74 passing）。

@@ -29,10 +29,12 @@ import {
 	buildClassificationDebugSections,
 	buildClassificationObservabilityStats,
 	buildClassificationRenderOptionsByPreset,
+	filterClassificationInspectorResults,
 	filterClassificationDebugSections,
 	formatClassificationDebugReport,
 	getClassificationDebugSectionPriority,
 	getClassificationDebugSectionTypesByPreset,
+	resolveClassificationInspectorScopeArg,
 	resolveClassificationDebugPresetArg,
 	renderClassificationDebugSections
 } from '../commands/debugProjectClassification';
@@ -446,9 +448,70 @@ suite('Extension Test Suite', () => {
 
 		const lines = buildClassificationInspectorDetailLines(result, 'C:/repo');
 		assert.ok(lines.includes('Relative Path: shared/common_pkg.sv'));
+		assert.ok(lines.includes('Inspector Scope: all'));
 		assert.ok(lines.includes('Role (Secondary): verification'));
 		assert.ok(lines.includes('Referenced by Source Sets: design, verification'));
 		assert.ok(lines.includes('Referenced by Targets: sim_default'));
+	});
+
+	test('Classification inspector scope arg resolver supports string and object payloads', () => {
+		assert.strictEqual(resolveClassificationInspectorScopeArg('active'), 'active');
+		assert.strictEqual(resolveClassificationInspectorScopeArg('ACTIVE_TARGET'), 'active');
+		assert.strictEqual(resolveClassificationInspectorScopeArg('project_config'), 'project-config');
+		assert.strictEqual(resolveClassificationInspectorScopeArg({ scope: 'shared' }), 'shared');
+		assert.strictEqual(resolveClassificationInspectorScopeArg({ preset: 'heuristic' }), 'heuristic');
+		assert.strictEqual(resolveClassificationInspectorScopeArg({ mode: 'all' }), 'all');
+		assert.strictEqual(resolveClassificationInspectorScopeArg('unknown'), undefined);
+	});
+
+	test('Classification inspector scope filter returns expected subsets', () => {
+		const results = [
+			{
+				uri: 'C:/repo/rtl/dut.sv',
+				physicalType: PhysicalFileType.SystemVerilog,
+				rolePrimary: Role.Design,
+				roleSecondary: [],
+				sourceOfTruth: SourceOfTruth.ProjectConfig,
+				inActiveTarget: true,
+				referencedBySourceSets: ['design']
+			},
+			{
+				uri: 'C:/repo/shared/common_pkg.sv',
+				physicalType: PhysicalFileType.SystemVerilog,
+				rolePrimary: Role.Design,
+				roleSecondary: [Role.Verification],
+				sourceOfTruth: SourceOfTruth.ProjectConfig,
+				inActiveTarget: false,
+				referencedBySourceSets: ['design', 'verification']
+			},
+			{
+				uri: 'C:/repo/misc/tmp.sv',
+				physicalType: PhysicalFileType.SystemVerilog,
+				rolePrimary: Role.Design,
+				roleSecondary: [],
+				sourceOfTruth: SourceOfTruth.Heuristic,
+				inActiveTarget: false,
+				referencedBySourceSets: []
+			}
+		];
+
+		assert.strictEqual(filterClassificationInspectorResults(results, 'all').length, 3);
+		assert.deepStrictEqual(
+			filterClassificationInspectorResults(results, 'active').map(item => item.uri),
+			['C:/repo/rtl/dut.sv']
+		);
+		assert.deepStrictEqual(
+			filterClassificationInspectorResults(results, 'shared').map(item => item.uri),
+			['C:/repo/shared/common_pkg.sv']
+		);
+		assert.deepStrictEqual(
+			filterClassificationInspectorResults(results, 'project-config').map(item => item.uri),
+			['C:/repo/rtl/dut.sv', 'C:/repo/shared/common_pkg.sv']
+		);
+		assert.deepStrictEqual(
+			filterClassificationInspectorResults(results, 'heuristic').map(item => item.uri),
+			['C:/repo/misc/tmp.sv']
+		);
 	});
 
 	test('Classification debug formatter supports overview preset output', () => {
