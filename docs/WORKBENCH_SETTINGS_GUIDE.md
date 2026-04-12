@@ -109,6 +109,7 @@ This guide lists workbench-related settings that can be configured directly in V
   - Use `HDL: Run Active Target Simulation` to resolve active target context and run directly:
     - project config mode: run an ad-hoc context-driven task (prefers active target `filelist` and `top`)
     - fallback mode: warn and fall back to heuristic top simulation
+  - `Run Active Target Simulation` is executed via `SimManager.runTargetContext(...)` so target context fields (`resolvedFiles`, `includeDirs`, `defines`, `filelist`) flow through one simulation entry point.
   - When active target resolution degrades to heuristic fallback, run records are stored under `heuristic:<top>` target key for consistent artifact lookup.
   - Failed run records carry a failure type (`precheck` / `compile` / `runtime` / `unsupported`) in Recent Runs, Explorer `Tasks and Runs`, and debug output.
   - In `Tasks and Runs`, click a run record item to open artifacts for that target record.

@@ -5,7 +5,7 @@ import * as cp from 'child_process';
 import * as iconv from 'iconv-lite';
 import { ProjectManager } from '../project/projectManager';
 import { FilelistParser } from '../project/filelistParser';
-import { RunFailureType } from '../project/types';
+import { RunFailureType, TargetContext } from '../project/types';
 
 export interface HdlSimTask {
     name: string;
@@ -14,6 +14,8 @@ export interface HdlSimTask {
     top: string;
     sources?: string[];
     filelist?: string | string[];
+    includeDirs?: string[];
+    defines?: Record<string, string>;
     flags?: string[];
     waveform?: boolean;
     waveformFormat?: 'vcd' | 'fst';
@@ -230,6 +232,53 @@ export class SimManager {
     }
 
     /**
+     * Build an ad-hoc simulation task from resolved target context.
+     */
+    public static buildTaskFromTargetContext(activeContext: TargetContext): HdlSimTask | undefined {
+        if (!activeContext?.top) {
+            return undefined;
+        }
+
+        return {
+            name: `Simulate ${activeContext.targetId}`,
+            type: 'hdl-sim',
+            tool: 'iverilog',
+            top: activeContext.top,
+            sources: activeContext.resolvedFiles && activeContext.resolvedFiles.length > 0
+                ? activeContext.resolvedFiles
+                : undefined,
+            filelist: activeContext.filelist,
+            includeDirs: activeContext.includeDirs,
+            defines: activeContext.defines,
+            waveform: true,
+            waveformFormat: 'fst'
+        };
+    }
+
+    /**
+     * Run simulation directly from target context to keep command layer thin.
+     */
+    public static async runTargetContext(
+        activeContext: TargetContext,
+        projectManager: ProjectManager,
+        workspaceUri?: vscode.Uri
+    ): Promise<HdlSimRunResult> {
+        const task = this.buildTaskFromTargetContext(activeContext);
+        if (!task) {
+            return {
+                success: false,
+                taskName: 'Simulate (target context)',
+                top: '',
+                buildDir: '',
+                failureType: 'precheck',
+                message: 'Target context has no resolved top.'
+            };
+        }
+
+        return this.runTask(task, projectManager, workspaceUri);
+    }
+
+    /**
      * 运行仿真任务
      */
     public static async runTask(task: HdlSimTask, projectManager: ProjectManager, workspaceUri?: vscode.Uri): Promise<HdlSimRunResult> {
@@ -251,6 +300,9 @@ export class SimManager {
         const workingDir = this.resolveWorkspacePath(wsPath, task.workingDirectory || wsPath);
         const buildDir = this.resolveWorkspacePath(wsPath, task.buildDir || simConfig.buildDir);
         const flags = task.flags && task.flags.length > 0 ? task.flags : simConfig.defaultFlags;
+        const defineFlags = Object.entries(task.defines || {})
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([name, value]) => value ? `-D${name}=${value}` : `-D${name}`);
         const waveformEnabled = task.waveform ?? true;
         const waveformFormat = task.waveformFormat || 'fst';
         const autoOpenWaveform = task.autoOpenWaveform ?? simConfig.autoOpenWaveform;
@@ -284,6 +336,7 @@ export class SimManager {
         const sourceFileSet = new Set<string>();
 
         projectManager.getIncludeDirsForWorkspace(resolvedWorkspaceUri).forEach(dir => includeDirSet.add(dir));
+        (task.includeDirs || []).forEach(dir => includeDirSet.add(this.resolveWorkspacePath(wsPath, dir)));
         
         const noSourcesConfigured = (!task.sources || task.sources.length === 0) && !task.filelist;
         if (noSourcesConfigured) {
@@ -363,6 +416,7 @@ export class SimManager {
                 srcFiles,
                 includeFlags,
                 flags,
+                defineFlags,
                 waveformEnabled,
                 waveformFormat,
                 autoOpenWaveform,
@@ -389,6 +443,7 @@ export class SimManager {
         srcFiles: string[], 
         includeFlags: string[],
         flags: string[],
+        defineFlags: string[],
         waveformEnabled: boolean,
         waveformFormat: 'fst' | 'vcd',
         autoOpenWaveform: boolean,
@@ -401,7 +456,7 @@ export class SimManager {
 
         const vvpFile = path.join(buildDir, `${task.top}.vvp`);
         
-        let cmd = `${this.quotePath(iverilogPath)} ${flags.join(' ')} ${includeFlags.join(' ')} -o ${this.quotePath(vvpFile)} ${srcFiles.join(' ')}`;
+        let cmd = `${this.quotePath(iverilogPath)} ${flags.join(' ')} ${defineFlags.join(' ')} ${includeFlags.join(' ')} -o ${this.quotePath(vvpFile)} ${srcFiles.join(' ')}`;
         
         if (waveformEnabled && waveformFormat === 'fst') {
             // 如果开启 fst，这里其实靠 tb 内部的 $dumpfile, 但我们可以追加一个全局 define

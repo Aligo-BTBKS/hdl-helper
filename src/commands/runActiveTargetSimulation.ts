@@ -20,19 +20,11 @@ export function buildConfigFallbackWarning(activeTargetId?: string): string {
 }
 
 export function buildContextDrivenSimTask(activeContext: TargetContext | undefined): HdlSimTask | undefined {
-    if (!activeContext?.top) {
+    if (!activeContext) {
         return undefined;
     }
 
-    return {
-        name: `Simulate ${activeContext.targetId}`,
-        type: 'hdl-sim',
-        tool: 'iverilog',
-        top: activeContext.top,
-        filelist: activeContext.filelist,
-        waveform: true,
-        waveformFormat: 'fst'
-    };
+    return SimManager.buildTaskFromTargetContext(activeContext);
 }
 
 export function resolveRunTargetId(activeTargetId: string | undefined, fallbackTop: string | undefined): string | undefined {
@@ -106,7 +98,7 @@ export async function runActiveTargetSimulation(
             return;
         }
 
-        const runResult = await SimManager.runTask(contextTask, projectManager, workspaceFolder.uri);
+        const runResult = await SimManager.runTargetContext(activeContext, projectManager, workspaceFolder.uri);
         const targetDrivenRunsEnabled = vscode.workspace
             .getConfiguration('hdl-helper', workspaceFolder.uri)
             .get<boolean>('targetDrivenRuns.enabled', false);

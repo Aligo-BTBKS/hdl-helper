@@ -821,3 +821,29 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（55 passing）。
+
+## 2026-04-12 - Iteration 4 Day 17: SimManager TargetContext Entry
+
+- 目标: 继续收口 Iteration 4，将 active target 的 context-driven 执行入口下沉到 `SimManager`，减少命令层组装逻辑。
+- 变更文件:
+  - src/simulation/simManager.ts
+  - src/commands/runActiveTargetSimulation.ts
+  - src/test/extension.test.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - `SimManager` 新增 target-context 入口：
+    - `buildTaskFromTargetContext(activeContext)`
+    - `runTargetContext(activeContext, projectManager, workspaceUri)`
+  - `HdlSimTask` 扩展上下文字段：
+    - `includeDirs`
+    - `defines`
+  - `runTask` 编译参数增强：
+    - 合并 task-level `includeDirs`
+    - 将 `defines` 透传为 `iverilog` 的 `-D...` 参数
+  - `runActiveTargetSimulation` 改为调用 `SimManager.runTargetContext(...)`，命令层仅保留 target 解析与回退策略。
+  - 更新回归测试，确保 context-driven task 可携带 `resolvedFiles/includeDirs/defines/filelist`。
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（55 passing）。

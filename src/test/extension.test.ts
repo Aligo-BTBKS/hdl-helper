@@ -607,9 +607,9 @@ suite('Extension Test Suite', () => {
 			targetId: 'sim_default',
 			kind: TargetKind.Simulation,
 			top: 'tb_top',
-			resolvedFiles: [],
-			includeDirs: [],
-			defines: {},
+			resolvedFiles: ['C:/repo/tb/tb_top.sv'],
+			includeDirs: ['rtl/include'],
+			defines: { FOO: '1' },
 			constraints: [],
 			scripts: [],
 			filelist: '.vscode/sim.f',
@@ -619,6 +619,9 @@ suite('Extension Test Suite', () => {
 		assert.strictEqual(task?.name, 'Simulate sim_default');
 		assert.strictEqual(task?.top, 'tb_top');
 		assert.strictEqual(task?.filelist, '.vscode/sim.f');
+		assert.deepStrictEqual(task?.sources, ['C:/repo/tb/tb_top.sv']);
+		assert.deepStrictEqual(task?.includeDirs, ['rtl/include']);
+		assert.deepStrictEqual(task?.defines, { FOO: '1' });
 	});
 
 	test('Active target run target id resolver uses heuristic top fallback', () => {
