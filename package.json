@@ -188,6 +188,12 @@
         "icon": "$(book)"
       },
       {
+        "command": "hdl-helper.openSimulationTasksFile",
+        "title": "HDL: Open Simulation Tasks File",
+        "category": "HDL Helper",
+        "icon": "$(go-to-file)"
+      },
+      {
         "command": "hdl-helper.openDualHierarchyRegressionChecklist",
         "title": "HDL: Open Dual Hierarchy Regression Checklist",
         "category": "HDL Helper",
@@ -665,6 +671,16 @@
           "command": "hdl-helper.runSimulationTaskItem",
           "when": "view == hdl-hierarchy-view && viewItem == simulation-task",
           "group": "inline@1"
+        },
+        {
+          "command": "hdl-helper.openSimulationTasksFile",
+          "when": "view == hdl-hierarchy-view && viewItem == simulation-tasks-group",
+          "group": "navigation@1"
+        },
+        {
+          "command": "hdl-helper.openSimulationTasksFile",
+          "when": "view == hdl-hierarchy-view && viewItem == tasks-runs-root",
+          "group": "navigation@2"
         },
         {
           "command": "hdl-helper.copyInstantiation",

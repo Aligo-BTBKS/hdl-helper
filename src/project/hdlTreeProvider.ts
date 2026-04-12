@@ -698,7 +698,15 @@ export class HdlTreeProvider implements vscode.TreeDataProvider<HdlTreeItem> {
     private async getSimulationTaskChildren(): Promise<HdlTreeItem[]> {
         const tasks = await this.getSimulationTasks();
         if (tasks.length === 0) {
-            return [new HdlInfoItem('No simulation tasks', 'Configure .vscode/hdl_tasks.json to add tasks', 'info')];
+            return [new HdlInfoItem(
+                'No simulation tasks',
+                'Open or create hdl_tasks.json to add tasks',
+                'info',
+                {
+                    command: 'hdl-helper.openSimulationTasksFile',
+                    title: 'Open Simulation Tasks File'
+                }
+            )];
         }
 
         return tasks

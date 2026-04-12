@@ -29,6 +29,7 @@ import { getRecentRunActions, getRecentRunEntries, prioritizeActiveTarget } from
 import { getAvailableArtifactActions, getMissingArtifactReasons } from '../commands/openLastRunArtifactsByTarget';
 import { pickRunRecordByTarget } from '../commands/openRunRecordArtifacts';
 import { resolveRerunTop, resolveTargetIdFromRerunArg } from '../commands/rerunTargetRun';
+import { getSimulationTasksFilePath, openSimulationTasksFile } from '../commands/openSimulationTasksFile';
 import { buildConfigIssues } from '../project/configDiagnostics';
 // import * as myExtension from '../../extension';
 
@@ -450,6 +451,70 @@ suite('Extension Test Suite', () => {
 		assert.strictEqual(openCalls, 0);
 		assert.strictEqual(createCalls, 1);
 		assert.strictEqual(warningCalls, 1);
+	});
+
+	test('Simulation tasks file path resolver handles relative and absolute paths', () => {
+		const normalize = (value: string) => value.replace(/\\/g, '/');
+		assert.strictEqual(
+			normalize(getSimulationTasksFilePath('C:/repo', '.vscode/hdl_tasks.json')),
+			'C:/repo/.vscode/hdl_tasks.json'
+		);
+		assert.strictEqual(
+			normalize(getSimulationTasksFilePath('C:/repo', 'D:/workspace/custom_tasks.json')),
+			'D:/workspace/custom_tasks.json'
+		);
+	});
+
+	test('Open simulation tasks helper opens existing file', async () => {
+		const opened: string[] = [];
+		let writeCalls = 0;
+
+		const result = await openSimulationTasksFile({
+			workspaceRoot: 'C:/repo',
+			configuredTasksFile: '.vscode/hdl_tasks.json',
+			existsSync: () => true,
+			writeFile: async () => {
+				writeCalls += 1;
+			},
+			openFile: async (filePath: string) => {
+				opened.push(filePath);
+			}
+		});
+
+		assert.strictEqual(result, 'opened');
+		assert.strictEqual(writeCalls, 0);
+		assert.strictEqual(opened.length, 1);
+		assert.ok((opened[0] || '').replace(/\\/g, '/').endsWith('.vscode/hdl_tasks.json'));
+	});
+
+	test('Open simulation tasks helper creates template when missing', async () => {
+		const opened: string[] = [];
+		const written: string[] = [];
+		let ensureCalls = 0;
+
+		const result = await openSimulationTasksFile({
+			workspaceRoot: 'C:/repo',
+			configuredTasksFile: '.vscode/hdl_tasks.json',
+			existsSync: () => false,
+			ensureDir: () => {
+				ensureCalls += 1;
+			},
+			writeFile: async (_filePath: string, content: string) => {
+				written.push(content);
+			},
+			openFile: async (filePath: string) => {
+				opened.push(filePath);
+			},
+			showInfo: () => {
+				// no-op
+			}
+		});
+
+		assert.strictEqual(result, 'created');
+		assert.strictEqual(ensureCalls, 1);
+		assert.strictEqual(written.length, 1);
+		assert.ok((written[0] || '').includes('"tasks"'));
+		assert.strictEqual(opened.length, 1);
 	});
 
 	test('Recent runs formatter returns fallback line for empty records', () => {

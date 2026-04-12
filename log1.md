@@ -640,3 +640,38 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（43 passing）。
+
+## 2026-04-12 - Iteration 4 Day 11: Simulation Tasks File Onboarding
+
+- 目标: 继续完善 Iteration 4 任务可操作性，补齐 `Simulation Tasks` 空状态的一键可达配置路径。
+- 变更文件:
+  - src/commands/openSimulationTasksFile.ts
+  - src/extension.ts
+  - src/project/hdlTreeProvider.ts
+  - src/test/extension.test.ts
+  - package.json
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - 新增命令 `HDL: Open Simulation Tasks File`：
+    - 打开当前配置的 `simulation.tasksFile`
+    - 文件缺失时自动创建模板并打开
+  - 新增 helper：
+    - `getSimulationTasksFilePath`
+    - `buildSimulationTasksTemplate`
+    - `openSimulationTasksFile`
+  - 入口接入：
+    - Command Palette
+    - `HDL: Quick Actions`
+    - `HDL: Open Hierarchy Tools`
+    - `Tasks and Runs` 的 `Simulation Tasks` 分组与根节点右键菜单
+  - 空状态优化：
+    - `Simulation Tasks` 无任务时提示项支持直接点击进入任务文件创建/编辑
+  - 新增最小回归测试：
+    - `Simulation tasks file path resolver handles relative and absolute paths`
+    - `Open simulation tasks helper opens existing file`
+    - `Open simulation tasks helper creates template when missing`
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（46 passing）。

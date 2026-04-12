@@ -36,6 +36,8 @@ This guide lists workbench-related settings that can be configured directly in V
 - Quick Actions: `HDL: Quick Actions` -> `Open Last Run Artifacts (Active Target)`
 - Command Palette: `HDL: Rerun Active Target`
 - Quick Actions: `HDL: Quick Actions` -> `Rerun Active Target`
+- Command Palette: `HDL: Open Simulation Tasks File`
+- Quick Actions: `HDL: Quick Actions` -> `Open Simulation Tasks File`
 - Command Palette: `HDL: Open Dual Hierarchy Regression Checklist`
 - Quick Actions: `HDL: Quick Actions` -> `Open Dual Hierarchy Regression Checklist`
 
@@ -45,6 +47,7 @@ This guide lists workbench-related settings that can be configured directly in V
 - Use `HDL: Open Hierarchy Tools` (single tools icon) to access:
   - Workbench Settings
   - Simulation Settings
+  - Simulation Tasks File
   - Workbench Settings Guide
   - Dual Hierarchy Regression Checklist
   - Debug Dual Hierarchy State
@@ -89,6 +92,7 @@ This guide lists workbench-related settings that can be configured directly in V
     - `Recent Runs`
     - `Last Waveform`
     - `Last Logs`
+  - Use `HDL: Open Simulation Tasks File` to open configured simulation task file (auto-create template if missing).
   - In `Simulation Tasks`, click a task item (or right-click and run `HDL: Run Simulation Task Item`) to trigger simulation for that task top.
   - Use `HDL: Debug Recent Runs By Target` to inspect current stored run records.
   - Use `HDL: Open Last Waveform (Active Target)` to reopen waveform by active target context.

@@ -21,6 +21,7 @@ import { openRecentRuns } from './commands/openRecentRuns';
 import { openLastRunArtifactsByTarget } from './commands/openLastRunArtifactsByTarget';
 import { openRunRecordArtifacts } from './commands/openRunRecordArtifacts';
 import { rerunTargetRun, resolveTargetIdFromRerunArg } from './commands/rerunTargetRun';
+import { openSimulationTasksFile } from './commands/openSimulationTasksFile';
 import { debugDualHierarchyState } from './commands/debugDualHierarchyState';
 import { openDualHierarchyRegressionChecklist } from './commands/openDualHierarchyRegressionChecklist';
 import { openProjectConfigFromWorkspace } from './commands/openProjectConfig';
@@ -285,6 +286,11 @@ export function activate(context: vscode.ExtensionContext) {
                 detail: 'Configuration'
             },
             {
+                label: 'Open Simulation Tasks File',
+                description: 'Open or create configured hdl_tasks.json file',
+                detail: 'Configuration'
+            },
+            {
                 label: 'Open Workbench Settings',
                 description: 'Configure explorer grouping, source scan filters, and fallback behavior',
                 detail: 'Configuration'
@@ -386,6 +392,10 @@ export function activate(context: vscode.ExtensionContext) {
             await vscode.commands.executeCommand('hdl-helper.openSimulationSettings');
             return;
         }
+        if (action.label === 'Open Simulation Tasks File') {
+            await vscode.commands.executeCommand('hdl-helper.openSimulationTasksFile');
+            return;
+        }
         if (action.label === 'Open Workbench Settings') {
             await vscode.commands.executeCommand('hdl-helper.openWorkbenchSettings');
             return;
@@ -454,6 +464,11 @@ export function activate(context: vscode.ExtensionContext) {
                 label: '[Settings] Simulation Settings',
                 description: 'Open simulation task/path settings',
                 command: 'hdl-helper.openSimulationSettings'
+            },
+            {
+                label: '[Settings] Simulation Tasks File',
+                description: 'Open or create configured hdl_tasks.json',
+                command: 'hdl-helper.openSimulationTasksFile'
             },
             {
                 label: '[Settings] Workbench Settings Guide',
@@ -799,6 +814,18 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.openSimulationSettings', async () => {
         await vscode.commands.executeCommand('workbench.action.openSettings', 'hdl-helper.simulation');
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.openSimulationTasksFile', async () => {
+        const workspaceFolder = resolveWorkspaceForContext();
+        const configuredTasksFile = workspaceFolder
+            ? vscode.workspace.getConfiguration('hdl-helper', workspaceFolder.uri).get<string>('simulation.tasksFile')
+            : undefined;
+
+        await openSimulationTasksFile({
+            workspaceRoot: workspaceFolder?.uri.fsPath,
+            configuredTasksFile
+        });
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.openWorkbenchSettings', async () => {
