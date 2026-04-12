@@ -1,9 +1,8 @@
 import * as fs from 'fs';
 import * as vscode from 'vscode';
-import { ProjectConfigService } from '../project/projectConfigService';
 import { StateService } from '../project/stateService';
-import { TargetContextService } from '../project/targetContextService';
 import { RunRecord } from '../project/types';
+import { resolveActiveTargetIdFromRuns } from '../simulation/runsService';
 
 export interface RecentRunEntry {
     targetId: string;
@@ -43,7 +42,7 @@ export function getRecentRunActions(record: RunRecord): string[] {
 export async function openRecentRuns(stateService: StateService): Promise<void> {
     const records = stateService.getAllRunRecords();
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-    const activeTargetId = await resolveActiveTargetIdForRuns(stateService, records, workspaceFolder);
+    const activeTargetId = await resolveActiveTargetIdFromRuns(stateService, records, workspaceFolder);
     const entries = prioritizeActiveTarget(getRecentRunEntries(records), activeTargetId);
     if (entries.length === 0) {
         vscode.window.showWarningMessage('No recent run records found for current workspace.');
@@ -107,37 +106,5 @@ export async function resolveActiveTargetIdForRuns(
     records: Record<string, RunRecord>,
     workspaceFolder: vscode.WorkspaceFolder | undefined
 ): Promise<string | undefined> {
-    if (!workspaceFolder) {
-        return undefined;
-    }
-
-    const configEnabled = vscode.workspace
-        .getConfiguration('hdl-helper', workspaceFolder.uri)
-        .get<boolean>('projectConfig.enabled', false);
-
-    if (configEnabled) {
-        const configService = new ProjectConfigService(workspaceFolder.uri.fsPath);
-        const projectConfig = await configService.loadConfig();
-        const targetContextService = new TargetContextService(workspaceFolder.uri.fsPath, {
-            projectConfig,
-            designTop: stateService.getDesignTop(),
-            simulationTop: stateService.getSimulationTop()
-        });
-        const targetId = targetContextService.getActiveTargetContext()?.targetId;
-        configService.dispose();
-        if (targetId) {
-            return targetId;
-        }
-    }
-
-    const simTop = stateService.getSimulationTop();
-    const designTop = stateService.getDesignTop();
-    if (simTop && records[`heuristic:${simTop}`]) {
-        return `heuristic:${simTop}`;
-    }
-    if (designTop && records[`heuristic:${designTop}`]) {
-        return `heuristic:${designTop}`;
-    }
-
-    return undefined;
+    return resolveActiveTargetIdFromRuns(stateService, records, workspaceFolder);
 }

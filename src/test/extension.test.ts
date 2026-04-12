@@ -36,6 +36,7 @@ import {
 	resolveFallbackSimulationTop,
 	resolveRunTargetId
 } from '../commands/runActiveTargetSimulation';
+import { resolveHeuristicRunTargetId, writeRunRecordForTarget } from '../simulation/runsService';
 import { buildConfigIssues } from '../project/configDiagnostics';
 // import * as myExtension from '../../extension';
 
@@ -557,6 +558,50 @@ suite('Extension Test Suite', () => {
 		assert.strictEqual(resolveRunTargetId('sim_default', 'tb_top'), 'sim_default');
 		assert.strictEqual(resolveRunTargetId('heuristic-fallback', 'tb_top'), 'heuristic:tb_top');
 		assert.strictEqual(resolveRunTargetId(undefined, 'tb_top'), 'heuristic:tb_top');
+	});
+
+	test('Runs service resolves heuristic run target id by simulation then design top', () => {
+		assert.strictEqual(resolveHeuristicRunTargetId({
+			'heuristic:tb_top': {
+				targetId: 'heuristic:tb_top',
+				timestamp: 1,
+				success: true
+			}
+		}, 'dut_top', 'tb_top'), 'heuristic:tb_top');
+
+		assert.strictEqual(resolveHeuristicRunTargetId({
+			'heuristic:dut_top': {
+				targetId: 'heuristic:dut_top',
+				timestamp: 1,
+				success: true
+			}
+		}, 'dut_top', undefined), 'heuristic:dut_top');
+	});
+
+	test('Runs service write helper forwards record to state service', async () => {
+		let writtenTargetId = '';
+		let writtenRecord: any;
+
+		const fakeState = {
+			setLastRunForTarget: async (targetId: string, record: any) => {
+				writtenTargetId = targetId;
+				writtenRecord = record;
+			}
+		} as any;
+
+		await writeRunRecordForTarget(fakeState, 'sim_default', {
+			top: 'tb_top',
+			taskName: 'Simulate sim_default',
+			success: true,
+			logPath: 'C:/repo/build/tb_top.run.log'
+		});
+
+		assert.strictEqual(writtenTargetId, 'sim_default');
+		assert.strictEqual(writtenRecord.targetId, 'sim_default');
+		assert.strictEqual(writtenRecord.top, 'tb_top');
+		assert.strictEqual(writtenRecord.success, true);
+		assert.strictEqual(writtenRecord.logPath, 'C:/repo/build/tb_top.run.log');
+		assert.ok(typeof writtenRecord.timestamp === 'number');
 	});
 
 	test('Recent runs formatter returns fallback line for empty records', () => {

@@ -103,6 +103,7 @@ This guide lists workbench-related settings that can be configured directly in V
   - Use `HDL: Open Last Log (Active Target)` to reopen latest run log by active target context.
   - Use `HDL: Open Recent Runs` to browse recent run records and open waveform/log interactively (active target record is prioritized and marked).
   - Use `HDL: Open Last Run Artifacts (Active Target)` for one-step reopen of the newest available artifact in active target run context.
+  - Active target resolution for run-related commands is centralized to a single runs service to keep command behavior consistent across waveform/log/recent-runs/rerun actions.
   - Use `HDL: Rerun Active Target` to rerun simulation with the latest top from the active target run record.
   - Use `HDL: Run Active Target Simulation` to resolve active target context and run directly:
     - project config mode: run an ad-hoc context-driven task (prefers active target `filelist` and `top`)

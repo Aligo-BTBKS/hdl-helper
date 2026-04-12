@@ -4,6 +4,7 @@ import { ProjectManager } from '../project/projectManager';
 import { StateService } from '../project/stateService';
 import { TargetContextService } from '../project/targetContextService';
 import { TargetContext } from '../project/types';
+import { writeRunRecordForTarget } from '../simulation/runsService';
 import { HdlSimTask, SimManager } from '../simulation/simManager';
 
 export function resolveFallbackSimulationTop(designTop?: string, simulationTop?: string): string | undefined {
@@ -113,11 +114,9 @@ export async function runActiveTargetSimulation(
         if (targetDrivenRunsEnabled) {
             const targetId = resolveRunTargetId(activeContext.targetId, resolvedTop);
             if (targetId) {
-                await stateService.setLastRunForTarget(targetId, {
-                    targetId,
+                await writeRunRecordForTarget(stateService, targetId, {
                     top: contextTask.top,
                     taskName: contextTask.name,
-                    timestamp: Date.now(),
                     success: runResult.success,
                     failureType: runResult.failureType,
                     waveformPath: runResult.waveformPath,

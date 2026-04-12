@@ -17,7 +17,7 @@ import { debugActiveTargetContext } from './commands/debugActiveTargetContext';
 import { debugRecentRunsByTarget } from './commands/debugRecentRuns';
 import { openLastWaveformByTarget } from './commands/openLastWaveformByTarget';
 import { openLastLogByTarget } from './commands/openLastLogByTarget';
-import { openRecentRuns, resolveActiveTargetIdForRuns } from './commands/openRecentRuns';
+import { openRecentRuns } from './commands/openRecentRuns';
 import { openLastRunArtifactsByTarget } from './commands/openLastRunArtifactsByTarget';
 import { openRunRecordArtifacts } from './commands/openRunRecordArtifacts';
 import { rerunTargetRun, resolveTargetIdFromRerunArg } from './commands/rerunTargetRun';
@@ -44,6 +44,7 @@ import { VerilogReferenceProvider } from './providers/referenceProvider';
 import { VerilogRenameProvider } from './providers/renameProvider';
 import { VerilogCompletionProvider } from './providers/completionProvider';
 import { HdlSimTask, SimManager } from './simulation/simManager';
+import { resolveActiveTargetIdFromRuns, writeRunRecordForTarget } from './simulation/runsService';
 import { WaveformViewer } from './simulation/waveformViewer';
 import { VivadoBridge } from './eda/vivadoBridge';
 import { XdcCompletionProvider } from './providers/xdcCompletionProvider';
@@ -210,7 +211,7 @@ export function activate(context: vscode.ExtensionContext) {
         },
         async () => {
             const workspaceFolder = resolveWorkspaceForContext();
-            return resolveActiveTargetIdForRuns(
+            return resolveActiveTargetIdFromRuns(
                 stateService,
                 stateService.getAllRunRecords(),
                 workspaceFolder
@@ -995,11 +996,9 @@ export function activate(context: vscode.ExtensionContext) {
                 configService.dispose();
             }
 
-            await stateService.setLastRunForTarget(targetId, {
-                targetId,
+            await writeRunRecordForTarget(stateService, targetId, {
                 top: task.top,
                 taskName: task.name,
-                timestamp: Date.now(),
                 success: runResult.success,
                 failureType: runResult.failureType,
                 waveformPath: runResult.waveformPath,

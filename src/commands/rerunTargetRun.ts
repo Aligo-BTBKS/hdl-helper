@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
-import { ProjectConfigService } from '../project/projectConfigService';
 import { StateService } from '../project/stateService';
-import { TargetContextService } from '../project/targetContextService';
 import { RunRecord } from '../project/types';
+import { resolveActiveTargetIdFromRuns } from '../simulation/runsService';
 import { pickRunRecordByTarget } from './openRunRecordArtifacts';
 
 export function resolveTargetIdFromRerunArg(arg: unknown): string | undefined {
@@ -51,31 +50,7 @@ export async function rerunTargetRun(stateService: StateService, explicitTargetI
 
     let targetId = explicitTargetId;
     if (!targetId) {
-        const configEnabled = vscode.workspace
-            .getConfiguration('hdl-helper', workspaceFolder.uri)
-            .get<boolean>('projectConfig.enabled', false);
-
-        if (configEnabled) {
-            const configService = new ProjectConfigService(workspaceFolder.uri.fsPath);
-            const projectConfig = await configService.loadConfig();
-            const targetContextService = new TargetContextService(workspaceFolder.uri.fsPath, {
-                projectConfig,
-                designTop: stateService.getDesignTop(),
-                simulationTop: stateService.getSimulationTop()
-            });
-            targetId = targetContextService.getActiveTargetContext()?.targetId;
-            configService.dispose();
-        }
-
-        if (!targetId) {
-            const simTop = stateService.getSimulationTop();
-            const designTop = stateService.getDesignTop();
-            if (simTop && records[`heuristic:${simTop}`]) {
-                targetId = `heuristic:${simTop}`;
-            } else if (designTop && records[`heuristic:${designTop}`]) {
-                targetId = `heuristic:${designTop}`;
-            }
-        }
+        targetId = await resolveActiveTargetIdFromRuns(stateService, records, workspaceFolder);
     }
 
     if (!targetId) {

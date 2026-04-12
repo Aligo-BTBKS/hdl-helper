@@ -761,3 +761,42 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（52 passing）。
+
+## 2026-04-12 - Iteration 4 Day 15: RunsService Consolidation
+
+- 目标: 继续收口 Iteration 4，抽离独立 `RunsService`，统一 active target 解析与 run record 写回逻辑。
+- 变更文件:
+  - src/simulation/runsService.ts
+  - src/commands/openRecentRuns.ts
+  - src/commands/openLastWaveformByTarget.ts
+  - src/commands/openLastLogByTarget.ts
+  - src/commands/openLastRunArtifactsByTarget.ts
+  - src/commands/rerunTargetRun.ts
+  - src/commands/runActiveTargetSimulation.ts
+  - src/extension.ts
+  - src/test/extension.test.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - 新增 `RunsService`：
+    - `resolveActiveTargetIdFromRuns`
+    - `resolveActiveRunRecord`
+    - `resolveHeuristicRunTargetId`
+    - `writeRunRecordForTarget`
+  - 五个命令改为复用统一 resolver：
+    - `Open Last Waveform (Active Target)`
+    - `Open Last Log (Active Target)`
+    - `Open Last Run Artifacts (Active Target)`
+    - `Open Recent Runs`
+    - `Rerun Active Target`
+  - 运行记录写回统一改用 `writeRunRecordForTarget`：
+    - `runSimulation`
+    - `runActiveTargetSimulation`
+  - 结果：run-related 命令的 active target 选择与回看行为保持一致，减少重复分支代码。
+  - 新增最小回归测试：
+    - `Runs service resolves heuristic run target id by simulation then design top`
+    - `Runs service write helper forwards record to state service`
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（54 passing）。
