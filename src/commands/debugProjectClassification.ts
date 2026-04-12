@@ -161,7 +161,7 @@ export function buildClassificationInspectorDetailLines(
 export function buildClassificationInspectorSummaryLines(
     results: FileClassificationResult[],
     scopePreset: ClassificationInspectorScopePreset = 'all',
-    options: { workspaceName?: string; workspaceRoot?: string } = {}
+    options: { workspaceName?: string; workspaceRoot?: string; topFileLimit?: number } = {}
 ): string[] {
     const truthCounts: Record<string, number> = {};
     const roleCounts: Record<string, number> = {};
@@ -226,8 +226,60 @@ export function buildClassificationInspectorSummaryLines(
     }
 
     lines.push('');
+    lines.push(`Top Files Preview (up to ${options.topFileLimit || 8}):`);
+    lines.push(...buildClassificationInspectorTopFilePreviewLines(results, {
+        workspaceRoot: options.workspaceRoot,
+        limit: options.topFileLimit
+    }));
+
+    lines.push('');
     lines.push('-'.repeat(80));
     return lines;
+}
+
+export function buildClassificationInspectorTopFilePreviewLines(
+    results: FileClassificationResult[],
+    options: { workspaceRoot?: string; limit?: number } = {}
+): string[] {
+    const truthPriority: Record<string, number> = {
+        [SourceOfTruth.ProjectConfig]: 10,
+        [SourceOfTruth.TargetLocal]: 20,
+        [SourceOfTruth.Filelist]: 30,
+        [SourceOfTruth.TaskReference]: 40,
+        [SourceOfTruth.Heuristic]: 50
+    };
+
+    const sorted = [...results].sort((a, b) => {
+        const activeDiff = Number(b.inActiveTarget) - Number(a.inActiveTarget);
+        if (activeDiff !== 0) {
+            return activeDiff;
+        }
+
+        const sharedDiff = Number(b.roleSecondary.length > 0) - Number(a.roleSecondary.length > 0);
+        if (sharedDiff !== 0) {
+            return sharedDiff;
+        }
+
+        const truthDiff = (truthPriority[a.sourceOfTruth] || 999) - (truthPriority[b.sourceOfTruth] || 999);
+        if (truthDiff !== 0) {
+            return truthDiff;
+        }
+
+        return toInspectorPath(a.uri, options.workspaceRoot)
+            .localeCompare(toInspectorPath(b.uri, options.workspaceRoot));
+    });
+
+    const limit = options.limit || 8;
+    const picked = sorted.slice(0, limit);
+    if (picked.length === 0) {
+        return ['  (none)'];
+    }
+
+    return picked.map(result => {
+        const pathLabel = toInspectorPath(result.uri, options.workspaceRoot);
+        const tags = `${result.inActiveTarget ? 'A' : '-'}${result.roleSecondary.length > 0 ? 'S' : '-'}`;
+        return `  [${tags}] ${pathLabel} | truth=${result.sourceOfTruth} | role=${result.rolePrimary}`;
+    });
 }
 
 export function formatClassificationDebugReport(

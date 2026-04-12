@@ -1242,3 +1242,29 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（75 passing）。
+
+## 2026-04-12 - Iteration 5 Day 34: Inspector Summary Top Files Preview
+
+- 目标: 继续推进 Iteration 5.5 inspector，在 summary 结果中增加可直接用于排查的代表性文件预览，强化“聚合到定位”的闭环。
+- 变更文件:
+  - src/commands/debugProjectClassification.ts
+  - src/test/extension.test.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - 新增 helper：
+    - `buildClassificationInspectorTopFilePreviewLines`
+  - `buildClassificationInspectorSummaryLines` 新增 `Top Files Preview` 区块：
+    - 按 deterministic priority 排序（active > shared > sourceOfTruth 优先级 > 路径）
+    - 输出 marker：
+      - `[A-]` 表示 active target file
+      - `[-S]` 表示 shared file
+      - `[AS]` 表示同时 active+shared
+  - 支持 summary options 传入 `topFileLimit` 控制预览数量（默认 8）。
+  - 回归补充：
+    - summary 含 top-file 区块断言
+    - top-file 排序稳定性断言
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（76 passing）。

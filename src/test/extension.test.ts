@@ -27,6 +27,7 @@ import {
 	buildClassificationInspectorDetailLines,
 	buildClassificationInspectorQuickPickItem,
 	buildClassificationInspectorSummaryLines,
+	buildClassificationInspectorTopFilePreviewLines,
 	buildClassificationDebugSections,
 	buildClassificationObservabilityStats,
 	buildClassificationRenderOptionsByPreset,
@@ -562,6 +563,48 @@ suite('Extension Test Suite', () => {
 		assert.ok(lines.includes('  design: 3'));
 		assert.ok(lines.includes('  design: 2'));
 		assert.ok(lines.includes('  verification: 1'));
+		assert.ok(lines.includes('Top Files Preview (up to 8):'));
+		assert.ok(lines.some(line => line.startsWith('  [A-] rtl/dut.sv')));
+		assert.ok(lines.some(line => line.startsWith('  [-S] shared/common_pkg.sv')));
+	});
+
+	test('Classification inspector top file preview keeps deterministic priority', () => {
+		const lines = buildClassificationInspectorTopFilePreviewLines([
+			{
+				uri: 'C:/repo/misc/fallback.sv',
+				physicalType: PhysicalFileType.SystemVerilog,
+				rolePrimary: Role.Design,
+				roleSecondary: [],
+				sourceOfTruth: SourceOfTruth.Heuristic,
+				inActiveTarget: false,
+				referencedBySourceSets: []
+			},
+			{
+				uri: 'C:/repo/shared/common_pkg.sv',
+				physicalType: PhysicalFileType.SystemVerilog,
+				rolePrimary: Role.Design,
+				roleSecondary: [Role.Verification],
+				sourceOfTruth: SourceOfTruth.ProjectConfig,
+				inActiveTarget: false,
+				referencedBySourceSets: ['design', 'verification']
+			},
+			{
+				uri: 'C:/repo/rtl/dut.sv',
+				physicalType: PhysicalFileType.SystemVerilog,
+				rolePrimary: Role.Design,
+				roleSecondary: [],
+				sourceOfTruth: SourceOfTruth.ProjectConfig,
+				inActiveTarget: true,
+				referencedBySourceSets: ['design']
+			}
+		], {
+			workspaceRoot: 'C:/repo',
+			limit: 3
+		});
+
+		assert.strictEqual(lines[0], '  [A-] rtl/dut.sv | truth=project_config | role=design');
+		assert.strictEqual(lines[1], '  [-S] shared/common_pkg.sv | truth=project_config | role=design');
+		assert.strictEqual(lines[2], '  [--] misc/fallback.sv | truth=heuristic | role=design');
 	});
 
 	test('Classification debug formatter supports overview preset output', () => {
