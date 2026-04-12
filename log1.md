@@ -1268,3 +1268,25 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（76 passing）。
+
+## 2026-04-12 - Iteration 5 Day 35: Summary Drill-down to Top Files
+
+- 目标: 继续推进 Iteration 5.5 inspector，把 summary 聚合结果升级为可直接下钻的排查入口。
+- 变更文件:
+  - src/commands/debugProjectClassification.ts
+  - src/test/extension.test.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - 新增结构化 helper：
+    - `buildClassificationInspectorTopFilePreviewEntries`
+  - `buildClassificationInspectorTopFilePreviewLines` 复用结构化 entries 输出，避免排序/截断逻辑重复。
+  - `inspectProjectClassificationSummary` 新增交互：
+    -  summary 输出后可选 `Open Top File`
+    -  从 top-file preview 快速选择并直接打开文件
+  - 回归补充：
+    - top-file entries 排序与 limit 行为测试
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（77 passing）。

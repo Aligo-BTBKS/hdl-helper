@@ -35,6 +35,12 @@ interface ClassificationInspectorScopePickItem {
     preset: ClassificationInspectorScopePreset;
 }
 
+interface ClassificationInspectorTopFilePreviewEntry {
+    pathLabel: string;
+    line: string;
+    result: FileClassificationResult;
+}
+
 const sectionPriority: Record<ClassificationDebugSectionType, number> = {
     workspace: 10,
     config: 20,
@@ -241,6 +247,14 @@ export function buildClassificationInspectorTopFilePreviewLines(
     results: FileClassificationResult[],
     options: { workspaceRoot?: string; limit?: number } = {}
 ): string[] {
+    return buildClassificationInspectorTopFilePreviewEntries(results, options)
+        .map(entry => entry.line);
+}
+
+export function buildClassificationInspectorTopFilePreviewEntries(
+    results: FileClassificationResult[],
+    options: { workspaceRoot?: string; limit?: number } = {}
+): ClassificationInspectorTopFilePreviewEntry[] {
     const truthPriority: Record<string, number> = {
         [SourceOfTruth.ProjectConfig]: 10,
         [SourceOfTruth.TargetLocal]: 20,
@@ -272,13 +286,17 @@ export function buildClassificationInspectorTopFilePreviewLines(
     const limit = options.limit || 8;
     const picked = sorted.slice(0, limit);
     if (picked.length === 0) {
-        return ['  (none)'];
+        return [];
     }
 
     return picked.map(result => {
         const pathLabel = toInspectorPath(result.uri, options.workspaceRoot);
         const tags = `${result.inActiveTarget ? 'A' : '-'}${result.roleSecondary.length > 0 ? 'S' : '-'}`;
-        return `  [${tags}] ${pathLabel} | truth=${result.sourceOfTruth} | role=${result.rolePrimary}`;
+        return {
+            pathLabel,
+            result,
+            line: `  [${tags}] ${pathLabel} | truth=${result.sourceOfTruth} | role=${result.rolePrimary}`
+        };
     });
 }
 
@@ -597,6 +615,10 @@ export async function inspectProjectClassificationSummary(
         return;
     }
 
+    const topFileEntries = buildClassificationInspectorTopFilePreviewEntries(filteredResults, {
+        workspaceRoot: input.workspaceRoot
+    });
+
     outputChannel.clear();
     outputChannel.show(true);
     for (const line of buildClassificationInspectorSummaryLines(filteredResults, scopePreset, {
@@ -605,6 +627,39 @@ export async function inspectProjectClassificationSummary(
     })) {
         outputChannel.appendLine(line);
     }
+
+    if (topFileEntries.length === 0) {
+        return;
+    }
+
+    const action = await vscode.window.showInformationMessage(
+        'Classification summary emitted to output channel.',
+        'Open Top File'
+    );
+    if (action !== 'Open Top File') {
+        return;
+    }
+
+    const pickedFile = await vscode.window.showQuickPick(
+        topFileEntries.map(entry => ({
+            label: entry.pathLabel,
+            description: `${entry.result.rolePrimary} | ${entry.result.sourceOfTruth}`,
+            detail: `active=${entry.result.inActiveTarget} | secondary=${entry.result.roleSecondary.join(',') || '(none)'}`,
+            result: entry.result
+        })),
+        {
+            placeHolder: 'Select top-file preview entry to open',
+            matchOnDescription: true,
+            matchOnDetail: true
+        }
+    );
+
+    if (!pickedFile) {
+        return;
+    }
+
+    const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(pickedFile.result.uri));
+    await vscode.window.showTextDocument(doc, { preview: false });
 }
 
 export function resolveClassificationInspectorScopeArg(
