@@ -610,3 +610,33 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（41 passing）。
+
+## 2026-04-12 - Iteration 4 Day 10: Tasks and Runs Section Expansion
+
+- 目标: 继续推进 Iteration 4，补齐 `Tasks and Runs` 的信息架构与操作闭环（Simulation Tasks / Recent Runs / Last Waveform / Last Logs）。
+- 变更文件:
+  - src/project/hdlTreeProvider.ts
+  - src/extension.ts
+  - src/test/extension.test.ts
+  - package.json
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - `Tasks and Runs` 根节点改为四个子分组：
+    - `Simulation Tasks`：展示 `hdl_tasks.json` 任务摘要（name/top/tool）
+    - `Recent Runs`：保留按时间倒序 target run records
+    - `Last Waveform`：展示可直接打开的最近波形记录
+    - `Last Logs`：展示可直接打开的最近日志记录
+  - 新增命令 `HDL: Run Simulation Task Item`，支持从 `Simulation Tasks` 节点直接触发仿真。
+  - 新增 helper：
+    - `getLatestWaveformEntries`
+    - `getLatestLogEntries`
+    用于从 run records 过滤存在文件并按时间排序。
+  - explorer 刷新增强：
+    - 监听 `RunRecorded` 事件自动刷新 `Tasks and Runs`
+    - `targetDrivenRuns.enabled` / `simulation.tasksFile` 配置变化触发刷新
+  - 菜单接入：`simulation-task` 节点右键增加 `Run Simulation Task Item`。
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（43 passing）。

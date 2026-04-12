@@ -84,7 +84,12 @@ This guide lists workbench-related settings that can be configured directly in V
 - `hdl-helper.targetDrivenRuns.enabled`
   - Enable target-oriented run management.
   - When enabled, each simulation run stores the latest run result under a target key in workspace state.
-  - Explorer adds `Tasks and Runs` section to show recent run records keyed by target.
+  - Explorer adds `Tasks and Runs` section with four subsections:
+    - `Simulation Tasks`
+    - `Recent Runs`
+    - `Last Waveform`
+    - `Last Logs`
+  - In `Simulation Tasks`, click a task item (or right-click and run `HDL: Run Simulation Task Item`) to trigger simulation for that task top.
   - Use `HDL: Debug Recent Runs By Target` to inspect current stored run records.
   - Use `HDL: Open Last Waveform (Active Target)` to reopen waveform by active target context.
   - Use `HDL: Open Last Log (Active Target)` to reopen latest run log by active target context.
@@ -94,6 +99,7 @@ This guide lists workbench-related settings that can be configured directly in V
   - Failed run records carry a failure type (`precheck` / `compile` / `runtime` / `unsupported`) in Recent Runs, Explorer `Tasks and Runs`, and debug output.
   - In `Tasks and Runs`, click a run record item to open artifacts for that target record.
   - In `Tasks and Runs`, right-click a run record and run `HDL: Rerun Active Target` to rerun that specific target record directly.
+  - In `Last Waveform` / `Last Logs`, click target items to directly reopen artifact files from stored run records.
 
 ## Sources View UI Behavior Settings
 

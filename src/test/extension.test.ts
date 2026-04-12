@@ -9,7 +9,7 @@ import * as vscode from 'vscode';
 import { FilelistParser } from '../project/filelistParser';
 import { ClassificationService } from '../project/classificationService';
 import { ProjectConfigStatus, Role, TargetKind } from '../project/types';
-import { HdlTreeProvider } from '../project/hdlTreeProvider';
+import { getLatestLogEntries, getLatestWaveformEntries, HdlTreeProvider } from '../project/hdlTreeProvider';
 import { HdlInstance, HdlModule, HdlPort } from '../project/hdlSymbol';
 import { mapLegacyTopSelection } from '../project/topSelectionPolicy';
 import {
@@ -677,5 +677,53 @@ suite('Extension Test Suite', () => {
 
 		assert.strictEqual(record?.targetId, 'sim_default');
 		assert.strictEqual(record?.success, true);
+	});
+
+	test('Latest waveform entries helper filters missing files and sorts descending', () => {
+		const entries = getLatestWaveformEntries({
+			old_target: {
+				targetId: 'old_target',
+				timestamp: 100,
+				success: true,
+				waveformPath: 'C:/repo/build/old.fst'
+			},
+			new_target: {
+				targetId: 'new_target',
+				timestamp: 200,
+				success: true,
+				waveformPath: 'C:/repo/build/new.fst'
+			},
+			missing_target: {
+				targetId: 'missing_target',
+				timestamp: 300,
+				success: true,
+				waveformPath: 'C:/repo/build/missing.fst'
+			}
+		}, filePath => !filePath.includes('missing'));
+
+		assert.strictEqual(entries.length, 2);
+		assert.strictEqual(entries[0].targetId, 'new_target');
+		assert.strictEqual(entries[1].targetId, 'old_target');
+	});
+
+	test('Latest log entries helper filters missing files and sorts descending', () => {
+		const entries = getLatestLogEntries({
+			old_target: {
+				targetId: 'old_target',
+				timestamp: 100,
+				success: false,
+				logPath: 'C:/repo/build/old.log'
+			},
+			new_target: {
+				targetId: 'new_target',
+				timestamp: 200,
+				success: false,
+				logPath: 'C:/repo/build/new.log'
+			}
+		}, () => true);
+
+		assert.strictEqual(entries.length, 2);
+		assert.strictEqual(entries[0].targetId, 'new_target');
+		assert.strictEqual(entries[1].targetId, 'old_target');
 	});
 });

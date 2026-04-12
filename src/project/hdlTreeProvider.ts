@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ProjectManager } from './projectManager';
 import { HdlModule, HdlInstance } from './hdlSymbol';
 import * as path from 'path';
+import * as fs from 'fs';
 import { buildConfigIssues } from './configDiagnostics';
 import { ClassificationService } from './classificationService';
 import { ProjectConfigService } from './projectConfigService';
@@ -21,6 +22,46 @@ import {
  * 树节点类型：可能是“模块定义”或者“实例化引用”
  */
 type HdlItem = HdlModule | HdlInstance | HdlInfoItem;
+
+interface SimulationTaskEntry {
+    name: string;
+    top: string;
+    tool?: string;
+}
+
+export interface LatestArtifactEntry {
+    targetId: string;
+    record: RunRecord;
+    filePath: string;
+}
+
+export function getLatestWaveformEntries(
+    records: Record<string, RunRecord>,
+    existsSync: (filePath: string) => boolean = fs.existsSync
+): LatestArtifactEntry[] {
+    return Object.entries(records)
+        .filter(([, record]) => !!record.waveformPath && existsSync(record.waveformPath))
+        .map(([targetId, record]) => ({
+            targetId,
+            record,
+            filePath: record.waveformPath as string
+        }))
+        .sort((a, b) => b.record.timestamp - a.record.timestamp);
+}
+
+export function getLatestLogEntries(
+    records: Record<string, RunRecord>,
+    existsSync: (filePath: string) => boolean = fs.existsSync
+): LatestArtifactEntry[] {
+    return Object.entries(records)
+        .filter(([, record]) => !!record.logPath && existsSync(record.logPath))
+        .map(([targetId, record]) => ({
+            targetId,
+            record,
+            filePath: record.logPath as string
+        }))
+        .sort((a, b) => b.record.timestamp - a.record.timestamp);
+}
 
 class HdlInfoItem extends vscode.TreeItem {
     constructor(label: string, description: string, icon: string, command?: vscode.Command) {
@@ -182,6 +223,83 @@ class TasksRunsRootItem extends vscode.TreeItem {
     }
 }
 
+class SimulationTasksGroupItem extends vscode.TreeItem {
+    constructor() {
+        super('Simulation Tasks', vscode.TreeItemCollapsibleState.Collapsed);
+        this.iconPath = new vscode.ThemeIcon('play-circle');
+        this.contextValue = 'simulation-tasks-group';
+    }
+}
+
+class RecentRunsGroupItem extends vscode.TreeItem {
+    constructor() {
+        super('Recent Runs', vscode.TreeItemCollapsibleState.Collapsed);
+        this.iconPath = new vscode.ThemeIcon('history');
+        this.contextValue = 'recent-runs-group';
+    }
+}
+
+class LastWaveformsGroupItem extends vscode.TreeItem {
+    constructor() {
+        super('Last Waveform', vscode.TreeItemCollapsibleState.Collapsed);
+        this.iconPath = new vscode.ThemeIcon('graph-line');
+        this.contextValue = 'last-waveforms-group';
+    }
+}
+
+class LastLogsGroupItem extends vscode.TreeItem {
+    constructor() {
+        super('Last Logs', vscode.TreeItemCollapsibleState.Collapsed);
+        this.iconPath = new vscode.ThemeIcon('output');
+        this.contextValue = 'last-logs-group';
+    }
+}
+
+class SimulationTaskItem extends vscode.TreeItem {
+    constructor(readonly task: SimulationTaskEntry) {
+        super(task.name, vscode.TreeItemCollapsibleState.None);
+        this.description = `top=${task.top}${task.tool ? ` | ${task.tool}` : ''}`;
+        this.tooltip = `${task.name} (${task.top})`;
+        this.iconPath = new vscode.ThemeIcon('play');
+        this.contextValue = 'simulation-task';
+        this.command = {
+            command: 'hdl-helper.runSimulationTaskItem',
+            title: 'Run Simulation Task',
+            arguments: [task.top]
+        };
+    }
+}
+
+class LastWaveformItem extends vscode.TreeItem {
+    constructor(readonly entry: LatestArtifactEntry) {
+        super(entry.targetId, vscode.TreeItemCollapsibleState.None);
+        this.description = path.basename(entry.filePath);
+        this.tooltip = `${entry.filePath}\n${new Date(entry.record.timestamp).toLocaleString()}`;
+        this.iconPath = new vscode.ThemeIcon('graph-line');
+        this.contextValue = 'last-waveform-item';
+        this.command = {
+            command: 'hdl-helper.viewWaveform',
+            title: 'Open Waveform',
+            arguments: [entry.filePath]
+        };
+    }
+}
+
+class LastLogItem extends vscode.TreeItem {
+    constructor(readonly entry: LatestArtifactEntry) {
+        super(entry.targetId, vscode.TreeItemCollapsibleState.None);
+        this.description = path.basename(entry.filePath);
+        this.tooltip = `${entry.filePath}\n${new Date(entry.record.timestamp).toLocaleString()}`;
+        this.iconPath = new vscode.ThemeIcon('output');
+        this.contextValue = 'last-log-item';
+        this.command = {
+            command: 'vscode.open',
+            title: 'Open Log',
+            arguments: [vscode.Uri.file(entry.filePath), { preview: false }]
+        };
+    }
+}
+
 class RunRecordItem extends vscode.TreeItem {
     constructor(readonly targetId: string, readonly record: RunRecord) {
         super(targetId, vscode.TreeItemCollapsibleState.None);
@@ -229,6 +347,13 @@ type HdlTreeItem =
     | SimulationHierarchyRootItem
     | DiagnosticsRootItem
     | TasksRunsRootItem
+    | SimulationTasksGroupItem
+    | RecentRunsGroupItem
+    | LastWaveformsGroupItem
+    | LastLogsGroupItem
+    | SimulationTaskItem
+    | LastWaveformItem
+    | LastLogItem
     | RunRecordItem;
 
 export class HdlTreeProvider implements vscode.TreeDataProvider<HdlTreeItem> {
@@ -243,9 +368,15 @@ export class HdlTreeProvider implements vscode.TreeDataProvider<HdlTreeItem> {
     private readonly hierarchyService = new HierarchyService();
     private scopedModuleNameCache: Partial<Record<HierarchyKind, Set<string>>> = {};
     private readonly getRunRecords: () => Record<string, RunRecord>;
+    private readonly getSimulationTasks: () => Promise<SimulationTaskEntry[]>;
 
-    constructor(private projectManager: ProjectManager, getRunRecords?: () => Record<string, RunRecord>) {
+    constructor(
+        private projectManager: ProjectManager,
+        getRunRecords?: () => Record<string, RunRecord>,
+        getSimulationTasks?: () => Promise<SimulationTaskEntry[]>
+    ) {
         this.getRunRecords = getRunRecords || (() => ({}));
+        this.getSimulationTasks = getSimulationTasks || (async () => []);
     }
 
     /**
@@ -325,6 +456,34 @@ export class HdlTreeProvider implements vscode.TreeDataProvider<HdlTreeItem> {
         }
 
         if (element instanceof TasksRunsRootItem) {
+            return element;
+        }
+
+        if (element instanceof SimulationTasksGroupItem) {
+            return element;
+        }
+
+        if (element instanceof RecentRunsGroupItem) {
+            return element;
+        }
+
+        if (element instanceof LastWaveformsGroupItem) {
+            return element;
+        }
+
+        if (element instanceof LastLogsGroupItem) {
+            return element;
+        }
+
+        if (element instanceof SimulationTaskItem) {
+            return element;
+        }
+
+        if (element instanceof LastWaveformItem) {
+            return element;
+        }
+
+        if (element instanceof LastLogItem) {
             return element;
         }
 
@@ -423,6 +582,26 @@ export class HdlTreeProvider implements vscode.TreeDataProvider<HdlTreeItem> {
             return this.getTasksRunsChildren();
         }
 
+        if (element instanceof SimulationTasksGroupItem) {
+            return this.getSimulationTaskChildren();
+        }
+
+        if (element instanceof RecentRunsGroupItem) {
+            return this.getRecentRunChildren();
+        }
+
+        if (element instanceof LastWaveformsGroupItem) {
+            return this.getLastWaveformChildren();
+        }
+
+        if (element instanceof LastLogsGroupItem) {
+            return this.getLastLogChildren();
+        }
+
+        if (element instanceof SimulationTaskItem || element instanceof LastWaveformItem || element instanceof LastLogItem) {
+            return [];
+        }
+
         if (element instanceof ScopedModuleItem) {
             return element.module.instances.map(instance => new ScopedInstanceItem(instance, element.kind));
         }
@@ -508,6 +687,27 @@ export class HdlTreeProvider implements vscode.TreeDataProvider<HdlTreeItem> {
     }
 
     private async getTasksRunsChildren(): Promise<HdlTreeItem[]> {
+        return [
+            new SimulationTasksGroupItem(),
+            new RecentRunsGroupItem(),
+            new LastWaveformsGroupItem(),
+            new LastLogsGroupItem()
+        ];
+    }
+
+    private async getSimulationTaskChildren(): Promise<HdlTreeItem[]> {
+        const tasks = await this.getSimulationTasks();
+        if (tasks.length === 0) {
+            return [new HdlInfoItem('No simulation tasks', 'Configure .vscode/hdl_tasks.json to add tasks', 'info')];
+        }
+
+        return tasks
+            .slice()
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map(task => new SimulationTaskItem(task));
+    }
+
+    private async getRecentRunChildren(): Promise<HdlTreeItem[]> {
         const records = this.getRunRecords();
         const entries = Object.entries(records)
             .map(([targetId, record]) => ({ targetId, record }))
@@ -518,6 +718,24 @@ export class HdlTreeProvider implements vscode.TreeDataProvider<HdlTreeItem> {
         }
 
         return entries.map(entry => new RunRecordItem(entry.targetId, entry.record));
+    }
+
+    private async getLastWaveformChildren(): Promise<HdlTreeItem[]> {
+        const entries = getLatestWaveformEntries(this.getRunRecords());
+        if (entries.length === 0) {
+            return [new HdlInfoItem('No waveform artifacts', 'Run simulation with waveform enabled', 'info')];
+        }
+
+        return entries.map(entry => new LastWaveformItem(entry));
+    }
+
+    private async getLastLogChildren(): Promise<HdlTreeItem[]> {
+        const entries = getLatestLogEntries(this.getRunRecords());
+        if (entries.length === 0) {
+            return [new HdlInfoItem('No log artifacts', 'Run simulation to generate run logs', 'info')];
+        }
+
+        return entries.map(entry => new LastLogItem(entry));
     }
 
     private async getDiagnosticsChildren(): Promise<HdlTreeItem[]> {

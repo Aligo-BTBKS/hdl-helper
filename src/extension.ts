@@ -29,7 +29,7 @@ import { activateLanguageServer, deactivateLanguageServer } from './languageClie
 // 引入 V2.0 工程核心
 import { ProjectManager } from './project/projectManager';
 import { HdlTreeProvider } from './project/hdlTreeProvider';
-import { StateService } from './project/stateService';
+import { StateChangeEvent, StateService } from './project/stateService';
 import { HierarchyService } from './project/hierarchyService';
 import { ProjectConfigService } from './project/projectConfigService';
 import { TargetContextService } from './project/targetContextService';
@@ -190,7 +190,23 @@ export function activate(context: vscode.ExtensionContext) {
 
     // C. 初始化 Tree Provider
     const stateService = new StateService(context);
-    const treeProvider = new HdlTreeProvider(projectManager, () => stateService.getAllRunRecords());
+    const treeProvider = new HdlTreeProvider(
+        projectManager,
+        () => stateService.getAllRunRecords(),
+        async () => {
+            const workspaceFolder = resolveWorkspaceForContext();
+            if (!workspaceFolder) {
+                return [];
+            }
+
+            const tasks = await SimManager.getTasks(workspaceFolder.uri);
+            return tasks.map(task => ({
+                name: task.name,
+                top: task.top,
+                tool: task.tool
+            }));
+        }
+    );
     const ipCatalogProvider = new IpCatalogProvider();
     context.subscriptions.push(stateService);
 
@@ -213,13 +229,21 @@ export function activate(context: vscode.ExtensionContext) {
         if (
             event.affectsConfiguration('hdl-helper.workbench.roleGroupedSources') ||
             event.affectsConfiguration('hdl-helper.projectConfig.enabled') ||
+            event.affectsConfiguration('hdl-helper.targetDrivenRuns.enabled') ||
             event.affectsConfiguration('hdl-helper.workbench.dualHierarchy') ||
+            event.affectsConfiguration('hdl-helper.simulation.tasksFile') ||
             event.affectsConfiguration('hdl-helper.workbench.sources.includePatterns') ||
             event.affectsConfiguration('hdl-helper.workbench.sources.excludePatterns') ||
             event.affectsConfiguration('hdl-helper.workbench.sources.showEmptyGroups') ||
             event.affectsConfiguration('hdl-helper.workbench.sources.showLegacyHierarchy') ||
             event.affectsConfiguration('hdl-helper.workbench.heuristic.defaultHdlRole')
         ) {
+            treeProvider.refresh();
+        }
+    }));
+
+    context.subscriptions.push(stateService.onStateChange(event => {
+        if (event === StateChangeEvent.RunRecorded) {
             treeProvider.refresh();
         }
     }));
@@ -737,6 +761,28 @@ export function activate(context: vscode.ExtensionContext) {
         }
 
         await vscode.commands.executeCommand('hdl-helper.runSimulation', targetModule.name, targetModule.fileUri);
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.runSimulationTaskItem', async (arg?: unknown) => {
+        let top = typeof arg === 'string'
+            ? arg
+            : (arg && typeof arg === 'object' && 'top' in (arg as Record<string, unknown>))
+                ? String((arg as Record<string, unknown>).top)
+                : undefined;
+
+        if (!top && arg && typeof arg === 'object' && 'task' in (arg as Record<string, unknown>)) {
+            const taskValue = (arg as Record<string, unknown>).task;
+            if (taskValue && typeof taskValue === 'object' && 'top' in (taskValue as Record<string, unknown>)) {
+                top = String((taskValue as Record<string, unknown>).top);
+            }
+        }
+
+        if (!top) {
+            vscode.window.showWarningMessage('No simulation top found for selected task item.');
+            return;
+        }
+
+        await vscode.commands.executeCommand('hdl-helper.runSimulation', top);
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.viewWaveformFromHierarchy', async (item?: HdlModule) => {
