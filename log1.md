@@ -938,3 +938,23 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（63 passing）。
+
+## 2026-04-12 - Iteration 5 Day 22: Shared Debug Report Types
+
+- 目标: 继续推进 Iteration 5，将分类调试模板输入结构提升到共享领域类型，减少 command-local 类型重复。
+- 变更文件:
+  - src/project/types.ts
+  - src/commands/debugProjectClassification.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - 在 `project/types.ts` 新增共享类型：
+    - `ClassificationDebugConfigSnapshot`
+    - `ClassificationObservabilityStats`
+    - `ClassificationDebugReportInput`
+  - `debugProjectClassification` 移除本地重复接口定义，改为直接复用共享类型。
+  - 结果：分类调试模板输入结构可被后续 Inspector/详情视图直接复用，降低类型漂移风险。
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（63 passing）。

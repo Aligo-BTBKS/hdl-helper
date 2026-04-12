@@ -151,6 +151,41 @@ export interface FileClassificationResult {
     referencedBySourceSets?: string[];
 }
 
+/**
+ * Optional config snapshot used by classification debug views.
+ */
+export interface ClassificationDebugConfigSnapshot {
+    name: string;
+    version: string;
+    sourceSetCount: number;
+    targetCount: number;
+    activeTarget?: string;
+}
+
+/**
+ * Aggregated observability counters for classification output.
+ */
+export interface ClassificationObservabilityStats {
+    totalFiles: number;
+    sharedFiles: number;
+    activeTargetFiles: number;
+    sourceSetCoverage: Record<string, number>;
+}
+
+/**
+ * Reusable report input for classification debug/inspector rendering.
+ */
+export interface ClassificationDebugReportInput {
+    workspaceName: string;
+    workspaceRoot: string;
+    configStatus: ProjectConfigStatus;
+    config?: ClassificationDebugConfigSnapshot;
+    hdlFileCount: number;
+    roleCounts: Record<string, number>;
+    stats: ClassificationObservabilityStats;
+    results: FileClassificationResult[];
+}
+
 // ============================================================================
 // Target Context Types
 // ============================================================================

@@ -275,7 +275,7 @@ suite('Extension Test Suite', () => {
 		const lines = formatClassificationDebugReport({
 			workspaceName: 'repo',
 			workspaceRoot: 'C:/repo',
-			configStatus: 'valid',
+			configStatus: ProjectConfigStatus.Valid,
 			config: {
 				name: 'repo',
 				version: '1.0',

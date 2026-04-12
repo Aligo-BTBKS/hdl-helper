@@ -10,31 +10,11 @@
 import * as vscode from 'vscode';
 import { ClassificationService } from '../project/classificationService';
 import { ProjectConfigService } from '../project/projectConfigService';
-import { FileClassificationResult } from '../project/types';
-
-export interface ClassificationObservabilityStats {
-    totalFiles: number;
-    sharedFiles: number;
-    activeTargetFiles: number;
-    sourceSetCoverage: Record<string, number>;
-}
-
-export interface ClassificationDebugReportInput {
-    workspaceName: string;
-    workspaceRoot: string;
-    configStatus: string;
-    config?: {
-        name: string;
-        version: string;
-        sourceSetCount: number;
-        targetCount: number;
-        activeTarget?: string;
-    };
-    hdlFileCount: number;
-    roleCounts: Record<string, number>;
-    stats: ClassificationObservabilityStats;
-    results: FileClassificationResult[];
-}
+import {
+    ClassificationDebugReportInput,
+    ClassificationObservabilityStats,
+    FileClassificationResult
+} from '../project/types';
 
 export function buildClassificationObservabilityStats(
     results: FileClassificationResult[]

@@ -93,6 +93,7 @@ This guide lists workbench-related settings that can be configured directly in V
   - Shared files referenced by multiple source sets now keep deterministic `primary role + secondary roles` semantics in classification results, and Sources tooltip shows secondary roles plus matched source set names.
   - `HDL: Debug Current Project Classification` now includes observability summary for shared-file count, active-target-covered file count, and per-source-set file coverage.
   - Classification debug output now uses a reusable report formatter template (`formatClassificationDebugReport`), so the same output model can be reused by future inspector/detail views.
+  - The formatter input/observability structures are now defined in shared project types (`ClassificationDebugReportInput`, `ClassificationObservabilityStats`) to avoid command-local type drift.
 
 - `hdl-helper.targetDrivenRuns.enabled`
   - Enable target-oriented run management.
