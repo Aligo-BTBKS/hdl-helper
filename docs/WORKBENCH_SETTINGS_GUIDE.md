@@ -111,6 +111,9 @@ This guide lists workbench-related settings that can be configured directly in V
   - Alias commands are also available for direct invocation without arguments:
     - `HDL: Debug Project Classification (Overview)`
     - `HDL: Debug Project Classification (Details)`
+  - Fast-path UI entries:
+    - HDL Explorer title bar: direct Overview/Details commands
+    - Diagnostics root context menu: direct Overview/Details commands
 
 - `hdl-helper.targetDrivenRuns.enabled`
   - Enable target-oriented run management.

@@ -640,6 +640,16 @@
           "group": "navigation@3"
         },
         {
+          "command": "hdl-helper.debugProjectClassificationOverview",
+          "when": "view == hdl-hierarchy-view",
+          "group": "navigation@4"
+        },
+        {
+          "command": "hdl-helper.debugProjectClassificationDetails",
+          "when": "view == hdl-hierarchy-view",
+          "group": "navigation@5"
+        },
+        {
           "command": "hdl-helper.runSimulationFromHierarchy",
           "when": "view == hdl-hierarchy-view",
           "group": "navigation@1"
@@ -715,6 +725,16 @@
           "command": "hdl-helper.runActiveTargetSimulation",
           "when": "view == hdl-hierarchy-view && viewItem == recent-runs-group",
           "group": "inline@1"
+        },
+        {
+          "command": "hdl-helper.debugProjectClassificationOverview",
+          "when": "view == hdl-hierarchy-view && viewItem == diagnostics-root",
+          "group": "inline@1"
+        },
+        {
+          "command": "hdl-helper.debugProjectClassificationDetails",
+          "when": "view == hdl-hierarchy-view && viewItem == diagnostics-root",
+          "group": "inline@2"
         },
         {
           "command": "hdl-helper.copyInstantiation",

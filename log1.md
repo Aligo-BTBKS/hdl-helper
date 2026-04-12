@@ -1097,3 +1097,23 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（71 passing）。
+
+## 2026-04-12 - Iteration 5 Day 29: Title Bar and Diagnostics Fast Paths
+
+- 目标: 按建议继续推进，把 overview/details 别名命令接入更短操作路径（title bar 与 diagnostics 节点快捷入口）。
+- 变更文件:
+  - package.json
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - `view/title` 新增 HDL Explorer 顶栏入口：
+    - `debugProjectClassificationOverview`
+    - `debugProjectClassificationDetails`
+  - `view/item/context` 新增 Diagnostics root 右键入口：
+    - `debugProjectClassificationOverview`
+    - `debugProjectClassificationDetails`
+  - 结果：分类调试 overview/details 降低为“单击直达”，无需先开 QuickPick。
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（71 passing）。
