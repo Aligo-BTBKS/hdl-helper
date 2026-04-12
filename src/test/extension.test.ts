@@ -67,6 +67,8 @@ import {
 import {
 	buildToolchainStatusForProfile,
 	collectToolchainProfileNames,
+	normalizeToolchainProfileProbeMap,
+	resolveToolchainHealthProfileArg,
 	resolveToolchainProbeIdsForProfile,
 	selectToolchainProbesForProfile
 } from '../commands/debugToolchainHealth';
@@ -1553,6 +1555,36 @@ suite('Extension Test Suite', () => {
 		assert.deepStrictEqual(resolveToolchainProbeIdsForProfile('iverilog'), ['iverilog', 'vvp']);
 		assert.deepStrictEqual(resolveToolchainProbeIdsForProfile('questa'), ['vlog', 'vsim']);
 		assert.deepStrictEqual(resolveToolchainProbeIdsForProfile('unknown-profile'), ['iverilog', 'vvp', 'verible-lint', 'verible-ls']);
+	});
+
+	test('Toolchain profile probe map normalizer merges custom overrides', () => {
+		const map = normalizeToolchainProfileProbeMap({
+			default: ['iverilog'],
+			xsim: ['xsim', 'xelab'],
+			CustomFlow: ['my-tool', 'my-tool', 'helper']
+		});
+
+		assert.deepStrictEqual(map.default, ['iverilog']);
+		assert.deepStrictEqual(map.xsim, ['xsim', 'xelab']);
+		assert.deepStrictEqual(map.customflow, ['my-tool', 'helper']);
+	});
+
+	test('Toolchain probe resolver supports custom profile map overrides', () => {
+		const map = normalizeToolchainProfileProbeMap({
+			customsim: ['custom-compile', 'custom-run']
+		});
+
+		assert.deepStrictEqual(
+			resolveToolchainProbeIdsForProfile('customsim', map),
+			['custom-compile', 'custom-run']
+		);
+	});
+
+	test('Toolchain health profile arg resolver supports string and object payloads', () => {
+		assert.strictEqual(resolveToolchainHealthProfileArg(' xsim '), 'xsim');
+		assert.strictEqual(resolveToolchainHealthProfileArg({ profile: '  questa  ' }), 'questa');
+		assert.strictEqual(resolveToolchainHealthProfileArg({}), undefined);
+		assert.strictEqual(resolveToolchainHealthProfileArg('   '), undefined);
 	});
 
 	test('Toolchain probe selector injects unavailable fallback probes for required ids', () => {

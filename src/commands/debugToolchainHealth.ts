@@ -13,7 +13,21 @@ export interface ToolchainProbeResult {
     available: boolean;
 }
 
+export type ToolchainProfileProbeMap = Record<string, string[]>;
+
 const DEFAULT_PROFILE_PROBE_IDS = ['iverilog', 'vvp', 'verible-lint', 'verible-ls'];
+
+const DEFAULT_PROFILE_PROBE_MAP: ToolchainProfileProbeMap = {
+    default: [...DEFAULT_PROFILE_PROBE_IDS],
+    iverilog: ['iverilog', 'vvp'],
+    icarus: ['iverilog', 'vvp'],
+    xsim: ['vivado', 'xvlog', 'xelab', 'xsim'],
+    vivado: ['vivado', 'xvlog', 'xelab', 'xsim'],
+    verilator: ['verilator'],
+    modelsim: ['vlog', 'vsim'],
+    questa: ['vlog', 'vsim'],
+    verible: ['verible-lint', 'verible-ls']
+};
 
 const PROFILE_PROBE_ID_MAP: Array<{ pattern: RegExp; probeIds: string[] }> = [
     { pattern: /^(default)$/i, probeIds: DEFAULT_PROFILE_PROBE_IDS },
@@ -38,12 +52,77 @@ const PROBE_FALLBACK_DEFINITIONS: Record<string, { label: string; command: strin
     'vsim': { label: 'vsim', command: 'vsim' }
 };
 
-export function resolveToolchainProbeIdsForProfile(profile: string): string[] {
+export function normalizeToolchainProfileProbeMap(rawValue: unknown): ToolchainProfileProbeMap {
+    const normalized: ToolchainProfileProbeMap = {};
+
+    for (const [profile, probeIds] of Object.entries(DEFAULT_PROFILE_PROBE_MAP)) {
+        normalized[profile] = [...probeIds];
+    }
+
+    if (!rawValue || typeof rawValue !== 'object' || Array.isArray(rawValue)) {
+        return normalized;
+    }
+
+    for (const [profile, probeIds] of Object.entries(rawValue as Record<string, unknown>)) {
+        const normalizedProfile = profile.trim().toLowerCase();
+        if (!normalizedProfile || !Array.isArray(probeIds)) {
+            continue;
+        }
+
+        const normalizedProbeIds = probeIds
+            .filter((value): value is string => typeof value === 'string')
+            .map(value => value.trim().toLowerCase())
+            .filter(value => value.length > 0);
+
+        if (normalizedProbeIds.length === 0) {
+            continue;
+        }
+
+        normalized[normalizedProfile] = Array.from(new Set(normalizedProbeIds));
+    }
+
+    return normalized;
+}
+
+function resolveConfiguredProbeIdsForProfile(
+    normalizedProfile: string,
+    profileProbeMap: ToolchainProfileProbeMap
+): string[] | undefined {
+    if (profileProbeMap[normalizedProfile]) {
+        return [...profileProbeMap[normalizedProfile]];
+    }
+
+    for (const [profileKey, probeIds] of Object.entries(profileProbeMap)) {
+        if (profileKey === 'default') {
+            continue;
+        }
+
+        if (normalizedProfile.includes(profileKey)) {
+            return [...probeIds];
+        }
+    }
+
+    return undefined;
+}
+
+export function resolveToolchainProbeIdsForProfile(
+    profile: string,
+    profileProbeMap: ToolchainProfileProbeMap = DEFAULT_PROFILE_PROBE_MAP
+): string[] {
     const normalizedProfile = profile.trim().toLowerCase();
+    const configuredProbeIds = resolveConfiguredProbeIdsForProfile(normalizedProfile, profileProbeMap);
+    if (configuredProbeIds) {
+        return configuredProbeIds;
+    }
+
     for (const entry of PROFILE_PROBE_ID_MAP) {
         if (entry.pattern.test(normalizedProfile)) {
             return [...entry.probeIds];
         }
+    }
+
+    if (profileProbeMap.default && profileProbeMap.default.length > 0) {
+        return [...profileProbeMap.default];
     }
 
     return [...DEFAULT_PROFILE_PROBE_IDS];
@@ -51,9 +130,10 @@ export function resolveToolchainProbeIdsForProfile(profile: string): string[] {
 
 export function selectToolchainProbesForProfile(
     profile: string,
-    probes: ToolchainProbeResult[]
+    probes: ToolchainProbeResult[],
+    profileProbeMap?: ToolchainProfileProbeMap
 ): ToolchainProbeResult[] {
-    const requiredProbeIds = resolveToolchainProbeIdsForProfile(profile);
+    const requiredProbeIds = resolveToolchainProbeIdsForProfile(profile, profileProbeMap);
     const probeById = new Map(probes.map(probe => [probe.id, probe]));
 
     return requiredProbeIds.map(probeId => {
@@ -74,6 +154,23 @@ export function selectToolchainProbesForProfile(
             available: false
         };
     });
+}
+
+export function resolveToolchainHealthProfileArg(arg?: unknown): string | undefined {
+    if (typeof arg === 'string') {
+        const normalized = arg.trim();
+        return normalized.length > 0 ? normalized : undefined;
+    }
+
+    if (arg && typeof arg === 'object') {
+        const profile = (arg as { profile?: unknown }).profile;
+        if (typeof profile === 'string') {
+            const normalized = profile.trim();
+            return normalized.length > 0 ? normalized : undefined;
+        }
+    }
+
+    return undefined;
 }
 
 export function collectToolchainProfileNames(config?: NormalizedProjectConfig): string[] {
@@ -121,6 +218,10 @@ async function execCommand(command: string, cwd: string): Promise<void> {
 }
 
 async function probeCommandAvailability(commandOrPath: string, cwd: string): Promise<boolean> {
+    if (!commandOrPath || commandOrPath.trim().length === 0) {
+        return false;
+    }
+
     const hasSlash = commandOrPath.includes('/') || commandOrPath.includes('\\');
     if (path.isAbsolute(commandOrPath) || hasSlash) {
         if (fs.existsSync(commandOrPath)) {
@@ -146,7 +247,8 @@ async function probeCommandAvailability(commandOrPath: string, cwd: string): Pro
 
 export async function debugToolchainHealthByProfile(
     outputChannel: vscode.OutputChannel,
-    stateService: StateService
+    stateService: StateService,
+    profileArg?: unknown
 ): Promise<void> {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
@@ -163,6 +265,9 @@ export async function debugToolchainHealthByProfile(
 
     for (const folder of workspaceFolders) {
         const config = vscode.workspace.getConfiguration('hdl-helper', folder.uri);
+        const profileProbeMap = normalizeToolchainProfileProbeMap(
+            config.get<unknown>('toolchain.profileProbeMap', {})
+        );
         const probes: ToolchainProbeResult[] = [
             {
                 id: 'iverilog',
@@ -212,16 +317,24 @@ export async function debugToolchainHealthByProfile(
             {
                 id: 'vlog',
                 label: 'vlog',
-                command: 'vlog'
+                command: config.get<string>('simulation.modelsimVlogPath', 'vlog')
             },
             {
                 id: 'vsim',
                 label: 'vsim',
-                command: 'vsim'
+                command: config.get<string>('simulation.modelsimVsimPath', 'vsim')
             }
-        ].map(item => ({ ...item, available: false }));
+        ].map(item => ({
+            ...item,
+            command: (item.command || '').trim(),
+            available: false
+        }));
 
         for (const probe of probes) {
+            if (!probe.command) {
+                probe.available = false;
+                continue;
+            }
             probe.available = await probeCommandAvailability(probe.command, folder.uri.fsPath);
         }
 
@@ -234,17 +347,28 @@ export async function debugToolchainHealthByProfile(
         }
 
         const profileNames = collectToolchainProfileNames(projectConfig);
+        const requestedProfile = resolveToolchainHealthProfileArg(profileArg);
+        let profilesToCheck = [...profileNames];
+        if (requestedProfile) {
+            const matchedProfile = profileNames.find(
+                profile => profile.toLowerCase() === requestedProfile.toLowerCase()
+            );
+            profilesToCheck = [matchedProfile || requestedProfile];
+        }
 
         outputChannel.appendLine(`Workspace: ${folder.name}`);
         outputChannel.appendLine(`Root: ${folder.uri.fsPath}`);
         outputChannel.appendLine('Tool Probes:');
         for (const probe of probes) {
-            outputChannel.appendLine(`  ${probe.label}: ${probe.available ? 'ok' : 'missing'} (${probe.command})`);
+            const probeState = !probe.command
+                ? 'invalid-setting'
+                : (probe.available ? 'ok' : 'missing');
+            outputChannel.appendLine(`  ${probe.label}: ${probeState} (${probe.command || '(empty)'})`);
         }
 
         outputChannel.appendLine('Profile Health:');
-        for (const profile of profileNames) {
-            const requiredProbes = selectToolchainProbesForProfile(profile, probes);
+        for (const profile of profilesToCheck) {
+            const requiredProbes = selectToolchainProbesForProfile(profile, probes, profileProbeMap);
             const status = buildToolchainStatusForProfile(profile, requiredProbes);
             await stateService.setToolchainStatus(profile, status);
             outputChannel.appendLine(

@@ -84,6 +84,7 @@ export interface ToolchainStatusDiagnosticsEntry {
     severity: 'warning' | 'pass' | 'info';
     message: string;
     description: string;
+    profile?: string;
 }
 
 export function buildToolchainStatusDiagnosticsEntries(
@@ -107,14 +108,16 @@ export function buildToolchainStatusDiagnosticsEntries(
             return {
                 severity: 'warning' as const,
                 message: `Toolchain profile '${profile}' missing tools: ${status.missingTools.join(', ') || '(none)'}`,
-                description: `lastChecked=${checkedTime}`
+                description: `lastChecked=${checkedTime}`,
+                profile
             };
         }
 
         return {
             severity: 'pass' as const,
             message: `Toolchain profile '${profile}' is healthy.`,
-            description: `lastChecked=${checkedTime}`
+            description: `lastChecked=${checkedTime}`,
+            profile
         };
     });
 }
@@ -935,14 +938,19 @@ export class HdlTreeProvider implements vscode.TreeDataProvider<HdlTreeItem> {
 
         const toolchainEntries = buildToolchainStatusDiagnosticsEntries(this.getToolchainStatusByProfile());
         for (const entry of toolchainEntries) {
+            const command: vscode.Command = {
+                command: 'hdl-helper.debugToolchainHealthByProfile',
+                title: 'Debug Toolchain Health By Profile'
+            };
+            if (entry.profile) {
+                command.arguments = [{ profile: entry.profile }];
+            }
+
             items.push(new HdlInfoItem(
                 entry.message,
                 entry.description,
                 entry.severity,
-                {
-                    command: 'hdl-helper.debugToolchainHealthByProfile',
-                    title: 'Debug Toolchain Health By Profile'
-                }
+                command
             ));
         }
 

@@ -1551,8 +1551,8 @@ export function activate(context: vscode.ExtensionContext) {
     const toolchainHealthOutputChannel = vscode.window.createOutputChannel('HDL Helper - Toolchain Health');
     context.subscriptions.push(toolchainHealthOutputChannel);
 
-    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.debugToolchainHealthByProfile', async () => {
-        await debugToolchainHealthByProfile(toolchainHealthOutputChannel, stateService);
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.debugToolchainHealthByProfile', async (arg?: unknown) => {
+        await debugToolchainHealthByProfile(toolchainHealthOutputChannel, stateService, arg);
     }));
 
     const dualHierarchyOutputChannel = vscode.window.createOutputChannel('HDL Helper - Dual Hierarchy');

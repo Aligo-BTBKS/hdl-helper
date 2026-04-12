@@ -140,6 +140,7 @@ This guide lists workbench-related settings that can be configured directly in V
   - Enable project.json-driven classification and context.
   - When enabled, explorer shows `Diagnostics` section with project config issues (missing/invalid config, unresolved target tops, validation warnings, and active-target fallback issues).
   - Diagnostics now also renders toolchain health snapshot entries by profile (`pass` / `warning`), with direct action to rerun `HDL: Debug Toolchain Health By Profile`.
+  - Clicking a profile-specific toolchain diagnostics item now triggers targeted recheck for that profile only.
   - Diagnostics now also checks per-target issues:
     - empty resolved files
     - missing resolved files
@@ -209,6 +210,7 @@ This guide lists workbench-related settings that can be configured directly in V
     - `verilator`: `verilator`
     - `modelsim` / `questa`: `vlog`, `vsim`
     - unknown/default profiles: `iverilog`, `vvp`, `verible-verilog-lint`, `verible-verilog-ls`
+  - Empty/invalid probe command settings are marked as `invalid-setting` in the toolchain probe output.
   - Use `HDL: Open Last Waveform (Active Target)` to reopen waveform by active target context.
   - Use `HDL: Open Last Log (Active Target)` to reopen latest run log by active target context.
   - Use `HDL: Open Recent Runs` to browse recent run records and open waveform/log interactively (active target record is prioritized and marked).
@@ -229,6 +231,30 @@ This guide lists workbench-related settings that can be configured directly in V
   - Optional allow-list for `target.toolProfile` diagnostics.
   - Empty array means unknown-profile check is disabled.
   - Example: `["iverilog", "xsim", "modelsim"]`
+
+- `hdl-helper.simulation.modelsimVlogPath`
+  - ModelSim/Questa `vlog` executable path.
+  - Default: `vlog`
+
+- `hdl-helper.simulation.modelsimVsimPath`
+  - ModelSim/Questa `vsim` executable path.
+  - Default: `vsim`
+
+- `hdl-helper.toolchain.profileProbeMap`
+  - Configures profile-to-probe mapping for `HDL: Debug Toolchain Health By Profile`.
+  - Keys are profile names (case-insensitive), values are probe id arrays.
+  - Built-in probe ids include:
+    - `iverilog`
+    - `vvp`
+    - `verible-lint`
+    - `verible-ls`
+    - `verilator`
+    - `xvlog`
+    - `xelab`
+    - `xsim`
+    - `vivado`
+    - `vlog`
+    - `vsim`
 
 ## CI Governance Gate
 

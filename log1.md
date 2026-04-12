@@ -1655,3 +1655,37 @@
   - npm run -s compile: 通过。
   - npm run -s lint: 通过。
   - npm test -s: 通过（93 passing）。
+
+## 2026-04-12 - Iteration 6 Day 49: Toolchain Governance Completion (3-in-1)
+
+- 目标: 一次性完成 toolchain 健康治理三项收口：规则外置、Diagnostics 按 profile 重检、ModelSim/Questa 路径设置与校验接入。
+- 变更文件:
+  - src/commands/debugToolchainHealth.ts
+  - src/project/hdlTreeProvider.ts
+  - src/extension.ts
+  - src/test/extension.test.ts
+  - package.json
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - 任务 1（规则外置）:
+    - 新增 `normalizeToolchainProfileProbeMap`，支持从 setting 读取并归一化 profile->probe 映射。
+    - `resolveToolchainProbeIdsForProfile` / `selectToolchainProbesForProfile` 支持注入外部映射。
+    - 新增 setting：`hdl-helper.toolchain.profileProbeMap`。
+  - 任务 2（Diagnostics 按 profile 重检）:
+    - `buildToolchainStatusDiagnosticsEntries` 输出增加 `profile` 元数据。
+    - Diagnostics 中 profile 条目点击后，命令携带 `{ profile }` 参数，仅重检该 profile。
+    - `debugToolchainHealthByProfile` 新增参数解析 helper：`resolveToolchainHealthProfileArg`。
+  - 任务 3（ModelSim/Questa 设置与校验）:
+    - 新增 settings：
+      - `hdl-helper.simulation.modelsimVlogPath`
+      - `hdl-helper.simulation.modelsimVsimPath`
+    - Toolchain probe 输出新增 `invalid-setting` 状态，用于标记空路径等无效命令配置。
+  - 回归补充:
+    - profile probe map 归一化覆盖测试
+    - 自定义 profile map 解析测试
+    - toolchain profile 命令参数解析测试
+- 验证:
+  - npm run -s compile: 通过。
+  - npm run -s lint: 通过。
+  - npm test -s: 通过（96 passing）。

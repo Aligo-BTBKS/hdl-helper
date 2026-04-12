@@ -478,6 +478,18 @@
           "default": "vvp",
           "description": "Icarus Verilog 运行器路径 (vvp)。如果未加入 PATH，请配置绝对路径。"
         },
+        "hdl-helper.simulation.modelsimVlogPath": {
+          "type": "string",
+          "default": "vlog",
+          "minLength": 1,
+          "description": "ModelSim/Questa 编译器路径 (vlog)。如果未加入 PATH，请配置绝对路径。"
+        },
+        "hdl-helper.simulation.modelsimVsimPath": {
+          "type": "string",
+          "default": "vsim",
+          "minLength": 1,
+          "description": "ModelSim/Questa 运行器路径 (vsim)。如果未加入 PATH，请配置绝对路径。"
+        },
         "hdl-helper.simulation.buildDir": {
           "type": "string",
           "default": "build",
@@ -602,6 +614,53 @@
           },
           "default": [],
           "description": "Project Config Diagnostics 用于校验 target.toolProfile 的已知 profile 列表。留空表示不做未知 profile 检查。"
+        },
+        "hdl-helper.toolchain.profileProbeMap": {
+          "type": "object",
+          "default": {
+            "default": [
+              "iverilog",
+              "vvp",
+              "verible-lint",
+              "verible-ls"
+            ],
+            "iverilog": [
+              "iverilog",
+              "vvp"
+            ],
+            "icarus": [
+              "iverilog",
+              "vvp"
+            ],
+            "xsim": [
+              "vivado",
+              "xvlog",
+              "xelab",
+              "xsim"
+            ],
+            "vivado": [
+              "vivado",
+              "xvlog",
+              "xelab",
+              "xsim"
+            ],
+            "verilator": [
+              "verilator"
+            ],
+            "modelsim": [
+              "vlog",
+              "vsim"
+            ],
+            "questa": [
+              "vlog",
+              "vsim"
+            ],
+            "verible": [
+              "verible-lint",
+              "verible-ls"
+            ]
+          },
+          "description": "Toolchain Health 的 profile->probe 映射。key 为 profile 名（不区分大小写），value 为需要检查的 probe id 列表。"
         },
         "hdl-helper.targetDrivenRuns.enabled": {
           "type": "boolean",
