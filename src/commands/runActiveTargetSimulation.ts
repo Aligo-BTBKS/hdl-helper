@@ -1,7 +1,10 @@
 import * as vscode from 'vscode';
 import { ProjectConfigService } from '../project/projectConfigService';
+import { ProjectManager } from '../project/projectManager';
 import { StateService } from '../project/stateService';
 import { TargetContextService } from '../project/targetContextService';
+import { TargetContext } from '../project/types';
+import { HdlSimTask, SimManager } from '../simulation/simManager';
 
 export function resolveFallbackSimulationTop(designTop?: string, simulationTop?: string): string | undefined {
     return simulationTop || designTop;
@@ -15,13 +18,45 @@ export function buildConfigFallbackWarning(activeTargetId?: string): string {
     return 'Unable to resolve active target context from project config. Falling back to heuristic top.';
 }
 
-export async function runActiveTargetSimulation(stateService: StateService): Promise<void> {
+export function buildContextDrivenSimTask(activeContext: TargetContext | undefined): HdlSimTask | undefined {
+    if (!activeContext?.top) {
+        return undefined;
+    }
+
+    return {
+        name: `Simulate ${activeContext.targetId}`,
+        type: 'hdl-sim',
+        tool: 'iverilog',
+        top: activeContext.top,
+        filelist: activeContext.filelist,
+        waveform: true,
+        waveformFormat: 'fst'
+    };
+}
+
+export function resolveRunTargetId(activeTargetId: string | undefined, fallbackTop: string | undefined): string | undefined {
+    if (activeTargetId && activeTargetId !== 'heuristic-fallback') {
+        return activeTargetId;
+    }
+
+    if (fallbackTop) {
+        return `heuristic:${fallbackTop}`;
+    }
+
+    return activeTargetId;
+}
+
+export async function runActiveTargetSimulation(
+    stateService: StateService,
+    projectManager: ProjectManager
+): Promise<void> {
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     if (!workspaceFolder) {
         vscode.window.showWarningMessage('No workspace folder open.');
         return;
     }
 
+    let activeContext: TargetContext | undefined;
     let resolvedTop: string | undefined;
     let fallbackWarning: string | undefined;
 
@@ -38,7 +73,7 @@ export async function runActiveTargetSimulation(stateService: StateService): Pro
             simulationTop: stateService.getSimulationTop()
         });
 
-        const activeContext = targetContextService.getActiveTargetContext();
+        activeContext = targetContextService.getActiveTargetContext();
         resolvedTop = activeContext?.top;
         if (!resolvedTop) {
             fallbackWarning = buildConfigFallbackWarning(activeContext?.targetId);
@@ -60,6 +95,38 @@ export async function runActiveTargetSimulation(stateService: StateService): Pro
 
     if (!resolvedTop) {
         vscode.window.showWarningMessage('Cannot resolve top for active target simulation. Set Simulation Top or configure active target top in project.json.');
+        return;
+    }
+
+    if (configEnabled && activeContext?.top) {
+        const contextTask = buildContextDrivenSimTask(activeContext);
+        if (!contextTask) {
+            vscode.window.showWarningMessage('Unable to build simulation task from active target context.');
+            return;
+        }
+
+        const runResult = await SimManager.runTask(contextTask, projectManager, workspaceFolder.uri);
+        const targetDrivenRunsEnabled = vscode.workspace
+            .getConfiguration('hdl-helper', workspaceFolder.uri)
+            .get<boolean>('targetDrivenRuns.enabled', false);
+
+        if (targetDrivenRunsEnabled) {
+            const targetId = resolveRunTargetId(activeContext.targetId, resolvedTop);
+            if (targetId) {
+                await stateService.setLastRunForTarget(targetId, {
+                    targetId,
+                    top: contextTask.top,
+                    taskName: contextTask.name,
+                    timestamp: Date.now(),
+                    success: runResult.success,
+                    failureType: runResult.failureType,
+                    waveformPath: runResult.waveformPath,
+                    buildDir: runResult.buildDir,
+                    logPath: runResult.logPath
+                });
+            }
+        }
+
         return;
     }
 

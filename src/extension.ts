@@ -925,7 +925,7 @@ export function activate(context: vscode.ExtensionContext) {
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.runActiveTargetSimulation', async () => {
-        await runActiveTargetSimulation(stateService);
+        await runActiveTargetSimulation(stateService, projectManager);
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.runSimulation', async (moduleName: string, sourceUri?: vscode.Uri) => {

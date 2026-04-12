@@ -30,7 +30,12 @@ import { getAvailableArtifactActions, getMissingArtifactReasons } from '../comma
 import { pickRunRecordByTarget } from '../commands/openRunRecordArtifacts';
 import { resolveRerunTop, resolveTargetIdFromRerunArg } from '../commands/rerunTargetRun';
 import { getSimulationTasksFilePath, openSimulationTasksFile } from '../commands/openSimulationTasksFile';
-import { buildConfigFallbackWarning, resolveFallbackSimulationTop } from '../commands/runActiveTargetSimulation';
+import {
+	buildConfigFallbackWarning,
+	buildContextDrivenSimTask,
+	resolveFallbackSimulationTop,
+	resolveRunTargetId
+} from '../commands/runActiveTargetSimulation';
 import { buildConfigIssues } from '../project/configDiagnostics';
 // import * as myExtension from '../../extension';
 
@@ -527,6 +532,31 @@ suite('Extension Test Suite', () => {
 	test('Active target simulation fallback warning includes target id when available', () => {
 		assert.ok(buildConfigFallbackWarning('sim_default').includes("sim_default"));
 		assert.ok(buildConfigFallbackWarning(undefined).includes('Unable to resolve active target context'));
+	});
+
+	test('Active target simulation builds context-driven task with filelist', () => {
+		const task = buildContextDrivenSimTask({
+			targetId: 'sim_default',
+			kind: TargetKind.Simulation,
+			top: 'tb_top',
+			resolvedFiles: [],
+			includeDirs: [],
+			defines: {},
+			constraints: [],
+			scripts: [],
+			filelist: '.vscode/sim.f',
+			sourceSets: ['simulation']
+		});
+
+		assert.strictEqual(task?.name, 'Simulate sim_default');
+		assert.strictEqual(task?.top, 'tb_top');
+		assert.strictEqual(task?.filelist, '.vscode/sim.f');
+	});
+
+	test('Active target run target id resolver uses heuristic top fallback', () => {
+		assert.strictEqual(resolveRunTargetId('sim_default', 'tb_top'), 'sim_default');
+		assert.strictEqual(resolveRunTargetId('heuristic-fallback', 'tb_top'), 'heuristic:tb_top');
+		assert.strictEqual(resolveRunTargetId(undefined, 'tb_top'), 'heuristic:tb_top');
 	});
 
 	test('Recent runs formatter returns fallback line for empty records', () => {

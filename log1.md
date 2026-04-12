@@ -734,3 +734,30 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（50 passing）。
+
+## 2026-04-12 - Iteration 4 Day 14: Context-driven Active Target Run
+
+- 目标: 继续推进 Iteration 4，补齐“按 active target context 驱动运行”的执行闭环。
+- 变更文件:
+  - src/commands/runActiveTargetSimulation.ts
+  - src/extension.ts
+  - src/test/extension.test.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - `HDL: Run Active Target Simulation` 升级为 context-driven 执行：
+    - projectConfig 模式下从 active target context 生成 ad-hoc 仿真任务并直接执行
+    - 若 context 提供 `filelist`，优先作为仿真边界输入
+  - 运行记录写回增强：
+    - 直接写入 target-driven run record（success/failureType/log/waveform）
+    - 当 active target 退化为 heuristic fallback 时，统一记录到 `heuristic:<top>` 键，保证后续回看命令一致命中
+  - 新增 helper：
+    - `buildContextDrivenSimTask`
+    - `resolveRunTargetId`
+  - 新增最小回归测试：
+    - `Active target simulation builds context-driven task with filelist`
+    - `Active target run target id resolver uses heuristic top fallback`
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（52 passing）。
