@@ -1139,3 +1139,38 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（71 passing）。
+
+## 2026-04-12 - Iteration 5 Day 31: Interactive Classification Inspector Entry
+
+- 目标: 按 Iteration 5.5 inspector 方向继续推进，增加可交互的单文件分类检查入口，不涉及外部仿真后端专项。
+- 变更文件:
+  - src/commands/debugProjectClassification.ts
+  - src/extension.ts
+  - package.json
+  - src/test/extension.test.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - 新增命令：
+    - `hdl-helper.inspectProjectClassification`
+  - 新增 inspector 流程：
+    - 选择 workspace（多工作区时）
+    - 选择分类结果中的文件（QuickPick）
+    - 输出该文件完整分类元数据（primary/secondary role、sourceOfTruth、active-target、sourceSet/target 引用）
+    - 可选直接打开该文件
+  - `debugProjectClassification.ts` 新增可复用 helper：
+    - `buildClassificationInspectorQuickPickItem`
+    - `buildClassificationInspectorDetailLines`
+    - 共用 `buildClassificationDebugReportInput` 以复用分类采集链路
+  - 快捷入口接线：
+    - Quick Actions
+    - Hierarchy Tools
+    - Command Palette
+    - HDL Explorer title bar
+    - Diagnostics root 右键菜单
+  - 回归补充：
+    - inspector quick-pick/详情行 helper 测试
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（72 passing）。

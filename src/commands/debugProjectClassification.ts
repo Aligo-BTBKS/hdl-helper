@@ -8,6 +8,7 @@
  */
 
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { ClassificationService } from '../project/classificationService';
 import { ProjectConfigService } from '../project/projectConfigService';
 import {
@@ -81,6 +82,64 @@ export function resolveClassificationDebugPresetArg(
 
     const candidate = arg as { preset?: unknown; view?: unknown; mode?: unknown };
     return pickPreset(candidate.preset) || pickPreset(candidate.view) || pickPreset(candidate.mode);
+}
+
+function toInspectorPath(filePath: string, workspaceRoot?: string): string {
+    if (!workspaceRoot) {
+        return filePath.replace(/\\/g, '/');
+    }
+
+    const relative = path.relative(workspaceRoot, filePath);
+    if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
+        return filePath.replace(/\\/g, '/');
+    }
+
+    return relative.replace(/\\/g, '/');
+}
+
+export function buildClassificationInspectorQuickPickItem(
+    result: FileClassificationResult,
+    workspaceRoot?: string
+): { label: string; description: string; detail: string } {
+    const sourceSetCount = result.referencedBySourceSets?.length || 0;
+    const secondaryRoles = result.roleSecondary.length > 0
+        ? ` | secondary=${result.roleSecondary.join(',')}`
+        : '';
+
+    return {
+        label: toInspectorPath(result.uri, workspaceRoot),
+        description: `${result.rolePrimary} | ${result.physicalType}`,
+        detail: `truth=${result.sourceOfTruth} | active=${result.inActiveTarget} | sourceSets=${sourceSetCount}${secondaryRoles}`
+    };
+}
+
+export function buildClassificationInspectorDetailLines(
+    result: FileClassificationResult,
+    workspaceRoot?: string
+): string[] {
+    const lines: string[] = [
+        '='.repeat(80),
+        'HDL Helper - Classification Inspector',
+        '='.repeat(80),
+        '',
+        `File: ${result.uri}`,
+        `Relative Path: ${toInspectorPath(result.uri, workspaceRoot)}`,
+        `Physical Type: ${result.physicalType}`,
+        `Role (Primary): ${result.rolePrimary}`,
+        `Role (Secondary): ${result.roleSecondary.length > 0 ? result.roleSecondary.join(', ') : '(none)'}`,
+        `Source of Truth: ${result.sourceOfTruth}`,
+        `In Active Target: ${result.inActiveTarget}`
+    ];
+
+    if (result.referencedBySourceSets && result.referencedBySourceSets.length > 0) {
+        lines.push(`Referenced by Source Sets: ${result.referencedBySourceSets.join(', ')}`);
+    }
+
+    if (result.referencedByTargets && result.referencedByTargets.length > 0) {
+        lines.push(`Referenced by Targets: ${result.referencedByTargets.join(', ')}`);
+    }
+
+    return lines;
 }
 
 export function formatClassificationDebugReport(
@@ -264,11 +323,78 @@ export async function debugProjectClassification(
     outputChannel.appendLine('='.repeat(80));
 }
 
-async function debugWorkspaceFolder(
-    folder: vscode.WorkspaceFolder,
-    outputChannel: vscode.OutputChannel,
-    renderOptions: ClassificationDebugSectionRenderOptions
+export async function inspectProjectClassification(
+    outputChannel: vscode.OutputChannel
 ): Promise<void> {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+        vscode.window.showWarningMessage('No workspace folder open');
+        return;
+    }
+
+    let folder = workspaceFolders[0];
+    if (workspaceFolders.length > 1) {
+        const pickedWorkspace = await vscode.window.showQuickPick(
+            workspaceFolders.map(candidate => ({
+                label: candidate.name,
+                description: candidate.uri.fsPath,
+                folder: candidate
+            })),
+            {
+                placeHolder: 'Select workspace for classification inspector'
+            }
+        );
+
+        if (!pickedWorkspace) {
+            return;
+        }
+
+        folder = pickedWorkspace.folder;
+    }
+
+    const input = await buildClassificationDebugReportInput(folder);
+    if (input.results.length === 0) {
+        vscode.window.showInformationMessage('No HDL files found for classification inspector.');
+        return;
+    }
+
+    const pickedResult = await vscode.window.showQuickPick(
+        input.results
+            .map(result => ({
+                ...buildClassificationInspectorQuickPickItem(result, input.workspaceRoot),
+                result
+            }))
+            .sort((a, b) => a.label.localeCompare(b.label)),
+        {
+            placeHolder: 'Select a classified file to inspect details',
+            matchOnDescription: true,
+            matchOnDetail: true
+        }
+    );
+
+    if (!pickedResult) {
+        return;
+    }
+
+    outputChannel.clear();
+    outputChannel.show(true);
+    for (const line of buildClassificationInspectorDetailLines(pickedResult.result, input.workspaceRoot)) {
+        outputChannel.appendLine(line);
+    }
+
+    const action = await vscode.window.showInformationMessage(
+        'Classification inspector details emitted to output channel.',
+        'Open File'
+    );
+    if (action === 'Open File') {
+        const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(pickedResult.result.uri));
+        await vscode.window.showTextDocument(doc, { preview: false });
+    }
+}
+
+async function buildClassificationDebugReportInput(
+    folder: vscode.WorkspaceFolder
+): Promise<ClassificationDebugReportInput> {
     const workspaceRoot = folder.uri.fsPath;
 
     // Load project config if exists
@@ -296,7 +422,7 @@ async function debugWorkspaceFolder(
         roleCounts[role] = files.length;
     }
 
-    const lines = formatClassificationDebugReport({
+    return {
         workspaceName: folder.name,
         workspaceRoot,
         configStatus,
@@ -313,7 +439,18 @@ async function debugWorkspaceFolder(
         roleCounts,
         stats,
         results
-    }, renderOptions);
+    };
+}
+
+async function debugWorkspaceFolder(
+    folder: vscode.WorkspaceFolder,
+    outputChannel: vscode.OutputChannel,
+    renderOptions: ClassificationDebugSectionRenderOptions
+): Promise<void> {
+    const lines = formatClassificationDebugReport(
+        await buildClassificationDebugReportInput(folder),
+        renderOptions
+    );
 
     for (const line of lines) {
         outputChannel.appendLine(line);

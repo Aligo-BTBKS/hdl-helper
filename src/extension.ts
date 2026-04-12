@@ -15,6 +15,7 @@ import { generateRegistersCommand } from './commands/generateRegisters';
 import {
     buildClassificationRenderOptionsByPreset,
     debugProjectClassification,
+    inspectProjectClassification,
     resolveClassificationDebugPresetArg
 } from './commands/debugProjectClassification';
 import { debugActiveTargetContext } from './commands/debugActiveTargetContext';
@@ -335,6 +336,11 @@ export function activate(context: vscode.ExtensionContext) {
                 detail: 'Diagnostics'
             },
             {
+                label: 'Inspect Project Classification (Pick File)',
+                description: 'Inspect one classified file with interactive picker',
+                detail: 'Diagnostics'
+            },
+            {
                 label: 'Debug Project Classification (All)',
                 description: 'Run classification debug with all sections preset',
                 detail: 'Diagnostics'
@@ -459,6 +465,10 @@ export function activate(context: vscode.ExtensionContext) {
             await vscode.commands.executeCommand('hdl-helper.debugProjectClassificationView');
             return;
         }
+        if (action.label === 'Inspect Project Classification (Pick File)') {
+            await vscode.commands.executeCommand('hdl-helper.inspectProjectClassification');
+            return;
+        }
         if (action.label === 'Debug Project Classification (All)') {
             await vscode.commands.executeCommand('hdl-helper.debugProjectClassificationAll');
             return;
@@ -553,6 +563,11 @@ export function activate(context: vscode.ExtensionContext) {
                 label: '[Diagnostics] Debug Project Classification (View...)',
                 description: 'Run classification debug with all/overview/details preset',
                 command: 'hdl-helper.debugProjectClassificationView'
+            },
+            {
+                label: '[Diagnostics] Inspect Project Classification (Pick File)',
+                description: 'Inspect one classified file with interactive picker',
+                command: 'hdl-helper.inspectProjectClassification'
             },
             {
                 label: '[Diagnostics] Debug Project Classification (All)',
@@ -1169,6 +1184,10 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.debugProjectClassification', async () => {
         await debugProjectClassification(classificationOutputChannel);
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.inspectProjectClassification', async () => {
+        await inspectProjectClassification(classificationOutputChannel);
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.debugProjectClassificationView', async (arg?: unknown) => {

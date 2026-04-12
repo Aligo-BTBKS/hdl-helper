@@ -28,6 +28,8 @@ This guide lists workbench-related settings that can be configured directly in V
 - Quick Actions: `HDL: Quick Actions` -> `Debug Current Project Classification`
 - Command Palette: `HDL: Debug Project Classification (View...)`
 - Quick Actions: `HDL: Quick Actions` -> `Debug Project Classification (View...)`
+- Command Palette: `HDL: Inspect Project Classification (Pick File)`
+- Quick Actions: `HDL: Quick Actions` -> `Inspect Project Classification (Pick File)`
 - Command Palette: `HDL: Debug Project Classification (All)`
 - Quick Actions: `HDL: Quick Actions` -> `Debug Project Classification (All)`
 - Command Palette: `HDL: Debug Project Classification (Overview)`
@@ -72,6 +74,7 @@ This guide lists workbench-related settings that can be configured directly in V
   - Open Last Run Artifacts (Active Target)
   - Rerun Active Target
   - Run Active Target Simulation
+  - Inspect Project Classification (Pick File)
   - Clear Top Module
 - In `Hierarchy Tools`, entries are grouped with prefixes for faster scanning:
   - `[Settings] ...`
@@ -109,6 +112,7 @@ This guide lists workbench-related settings that can be configured directly in V
     - `All Sections`
     - `Overview`
     - `Details Only`
+  - Use `HDL: Inspect Project Classification (Pick File)` to select a classified file interactively and inspect full metadata in the classification output channel.
   - The same command can be invoked programmatically with a preset argument (for automation/buttons), e.g. `overview` / `details` / `all`.
   - Alias commands are also available for direct invocation without arguments:
     - `HDL: Debug Project Classification (All)`

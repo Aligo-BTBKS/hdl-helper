@@ -24,6 +24,8 @@ import {
 } from '../commands/createProjectConfig';
 import { buildTargetContextDebugSnapshot } from '../commands/debugActiveTargetContext';
 import {
+	buildClassificationInspectorDetailLines,
+	buildClassificationInspectorQuickPickItem,
 	buildClassificationDebugSections,
 	buildClassificationObservabilityStats,
 	buildClassificationRenderOptionsByPreset,
@@ -423,6 +425,30 @@ suite('Extension Test Suite', () => {
 		assert.strictEqual(resolveClassificationDebugPresetArg({ mode: 'details' }), 'details');
 		assert.strictEqual(resolveClassificationDebugPresetArg('unknown'), undefined);
 		assert.strictEqual(resolveClassificationDebugPresetArg({ preset: 'unknown' }), undefined);
+	});
+
+	test('Classification inspector helpers build quick-pick and detail lines', () => {
+		const result = {
+			uri: 'C:/repo/shared/common_pkg.sv',
+			physicalType: PhysicalFileType.SystemVerilog,
+			rolePrimary: Role.Design,
+			roleSecondary: [Role.Verification],
+			sourceOfTruth: SourceOfTruth.ProjectConfig,
+			inActiveTarget: true,
+			referencedBySourceSets: ['design', 'verification'],
+			referencedByTargets: ['sim_default']
+		};
+
+		const item = buildClassificationInspectorQuickPickItem(result, 'C:/repo');
+		assert.strictEqual(item.label, 'shared/common_pkg.sv');
+		assert.strictEqual(item.description, 'design | systemverilog');
+		assert.ok(item.detail.includes('truth=project_config'));
+
+		const lines = buildClassificationInspectorDetailLines(result, 'C:/repo');
+		assert.ok(lines.includes('Relative Path: shared/common_pkg.sv'));
+		assert.ok(lines.includes('Role (Secondary): verification'));
+		assert.ok(lines.includes('Referenced by Source Sets: design, verification'));
+		assert.ok(lines.includes('Referenced by Targets: sim_default'));
 	});
 
 	test('Classification debug formatter supports overview preset output', () => {
