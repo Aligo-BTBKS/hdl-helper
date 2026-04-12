@@ -11,6 +11,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { ClassificationService } from '../project/classificationService';
 import { ProjectConfigService } from '../project/projectConfigService';
+import { TargetContextService } from '../project/targetContextService';
 import {
     ClassificationDebugSection,
     ClassificationDebugSectionFilterPreset,
@@ -19,7 +20,8 @@ import {
     ClassificationDebugSectionType,
     ClassificationObservabilityStats,
     FileClassificationResult,
-    SourceOfTruth
+    SourceOfTruth,
+    TargetContext
 } from '../project/types';
 
 export type ClassificationInspectorScopePreset =
@@ -147,8 +149,11 @@ export function buildClassificationInspectorQuickPickItem(
 export function buildClassificationInspectorDetailLines(
     result: FileClassificationResult,
     workspaceRoot?: string,
-    scopePreset: ClassificationInspectorScopePreset = 'all'
+    scopePreset: ClassificationInspectorScopePreset = 'all',
+    activeContext?: TargetContext
 ): string[] {
+    const resolvedPath = toInspectorPath(result.uri, workspaceRoot);
+
     const lines: string[] = [
         '='.repeat(80),
         'HDL Helper - Classification Inspector',
@@ -156,7 +161,8 @@ export function buildClassificationInspectorDetailLines(
         '',
         `Inspector Scope: ${scopePreset}`,
         `File: ${result.uri}`,
-        `Relative Path: ${toInspectorPath(result.uri, workspaceRoot)}`,
+        `Relative Path: ${resolvedPath}`,
+        `Resolved Path: ${resolvedPath}`,
         `Physical Type: ${result.physicalType}`,
         `Role (Primary): ${result.rolePrimary}`,
         `Role (Secondary): ${result.roleSecondary.length > 0 ? result.roleSecondary.join(', ') : '(none)'}`,
@@ -170,6 +176,44 @@ export function buildClassificationInspectorDetailLines(
 
     if (result.referencedByTargets && result.referencedByTargets.length > 0) {
         lines.push(`Referenced by Targets: ${result.referencedByTargets.join(', ')}`);
+    }
+
+    lines.push(...buildClassificationInspectorActiveContextLines(result, activeContext));
+
+    return lines;
+}
+
+export function buildClassificationInspectorActiveContextLines(
+    result: FileClassificationResult,
+    activeContext?: TargetContext
+): string[] {
+    const lines: string[] = [''];
+
+    if (!activeContext) {
+        lines.push('Active Target Context: (unavailable)');
+        return lines;
+    }
+
+    const normalizedUri = result.uri.replace(/\\/g, '/');
+    const inResolvedFiles = activeContext.resolvedFiles
+        .map(file => file.replace(/\\/g, '/'))
+        .includes(normalizedUri);
+    const defineEntries = Object.entries(activeContext.defines)
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([key, value]) => `${key}=${value}`);
+
+    lines.push(`Active Target Context: ${activeContext.targetId} (${activeContext.kind})`);
+    lines.push(`Active Target Top: ${activeContext.top || '(none)'}`);
+    lines.push(`In Active Target Resolved Files: ${inResolvedFiles}`);
+    lines.push(`Active Target Source Sets: ${activeContext.sourceSets.length > 0 ? activeContext.sourceSets.join(', ') : '(none)'}`);
+    lines.push(`Effective Include Dirs: ${activeContext.includeDirs.length > 0 ? activeContext.includeDirs.join(', ') : '(none)'}`);
+    lines.push(`Effective Defines: ${defineEntries.length > 0 ? defineEntries.join(', ') : '(none)'}`);
+
+    if (activeContext.filelist) {
+        lines.push(`Active Target Filelist: ${activeContext.filelist}`);
+    }
+    if (activeContext.toolProfile) {
+        lines.push(`Active Target Tool Profile: ${activeContext.toolProfile}`);
     }
 
     return lines;
@@ -580,9 +624,16 @@ export async function inspectProjectClassification(
         return;
     }
 
+    const activeContext = await resolveClassificationInspectorActiveTargetContext(input.workspaceRoot);
+
     outputChannel.clear();
     outputChannel.show(true);
-    for (const line of buildClassificationInspectorDetailLines(pickedResult.result, input.workspaceRoot, scopePreset)) {
+    for (const line of buildClassificationInspectorDetailLines(
+        pickedResult.result,
+        input.workspaceRoot,
+        scopePreset,
+        activeContext
+    )) {
         outputChannel.appendLine(line);
     }
 
@@ -934,6 +985,25 @@ async function buildClassificationDebugReportInput(
         stats,
         results
     };
+}
+
+async function resolveClassificationInspectorActiveTargetContext(
+    workspaceRoot: string
+): Promise<TargetContext | undefined> {
+    const configService = new ProjectConfigService(workspaceRoot);
+    const config = await configService.loadConfig();
+
+    if (!config) {
+        return undefined;
+    }
+
+    const targetContextService = new TargetContextService(workspaceRoot, {
+        projectConfig: config,
+        designTop: config.tops.design,
+        simulationTop: config.tops.simulation
+    });
+
+    return targetContextService.getActiveTargetContext();
 }
 
 async function debugWorkspaceFolder(

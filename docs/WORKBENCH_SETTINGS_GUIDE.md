@@ -147,6 +147,7 @@ This guide lists workbench-related settings that can be configured directly in V
     - `Overview`
     - `Details Only`
   - Use `HDL: Inspect Project Classification (Pick File)` to select scope preset and classified file interactively, then inspect full metadata in the classification output channel.
+  - Inspector detail output now includes `Resolved Path` and active target effective context fields (`resolved files` hit, `includeDirs`, `defines`, source sets, filelist/tool profile when available).
   - Use `HDL: Inspect Project Classification Summary` to inspect aggregated counters (sourceOfTruth/role/source-set coverage) under the selected scope preset.
   - Summary output now includes a deterministic `Top Files Preview` list with `[A-]`/`[-S]` markers for active/shared priority.
   - Summary command now supports one-click drill-down: choose `Open Top File` to open a file directly from preview entries.

@@ -24,6 +24,7 @@ import {
 } from '../commands/createProjectConfig';
 import { buildTargetContextDebugSnapshot } from '../commands/debugActiveTargetContext';
 import {
+	buildClassificationInspectorActiveContextLines,
 	buildClassificationInspectorDetailLines,
 	buildClassificationInspectorQuickPickItem,
 	buildClassificationInspectorSummaryLines,
@@ -457,6 +458,47 @@ suite('Extension Test Suite', () => {
 		assert.ok(lines.includes('Role (Secondary): verification'));
 		assert.ok(lines.includes('Referenced by Source Sets: design, verification'));
 		assert.ok(lines.includes('Referenced by Targets: sim_default'));
+	});
+
+	test('Classification inspector detail lines include active target context metadata', () => {
+		const result = {
+			uri: 'C:/repo/shared/common_pkg.sv',
+			physicalType: PhysicalFileType.SystemVerilog,
+			rolePrimary: Role.Design,
+			roleSecondary: [Role.Verification],
+			sourceOfTruth: SourceOfTruth.ProjectConfig,
+			inActiveTarget: true,
+			referencedBySourceSets: ['design', 'verification'],
+			referencedByTargets: ['sim_default']
+		};
+
+		const context = {
+			targetId: 'sim_default',
+			kind: TargetKind.Simulation,
+			top: 'tb_top',
+			resolvedFiles: ['C:\\repo\\shared\\common_pkg.sv', 'C:\\repo\\rtl\\dut.sv'],
+			includeDirs: ['inc/common', 'inc/sim'],
+			defines: { WIDTH: '32', USE_ASSERT: '1' },
+			constraints: [],
+			scripts: [],
+			filelist: 'sim/sim.f',
+			toolProfile: 'iverilog-default',
+			sourceSets: ['design', 'simulation']
+		};
+
+		const lines = buildClassificationInspectorDetailLines(result, 'C:/repo', 'active', context);
+		assert.ok(lines.includes('Resolved Path: shared/common_pkg.sv'));
+		assert.ok(lines.includes('Active Target Context: sim_default (simulation)'));
+		assert.ok(lines.includes('Active Target Top: tb_top'));
+		assert.ok(lines.includes('In Active Target Resolved Files: true'));
+		assert.ok(lines.includes('Active Target Source Sets: design, simulation'));
+		assert.ok(lines.includes('Effective Include Dirs: inc/common, inc/sim'));
+		assert.ok(lines.includes('Effective Defines: USE_ASSERT=1, WIDTH=32'));
+		assert.ok(lines.includes('Active Target Filelist: sim/sim.f'));
+		assert.ok(lines.includes('Active Target Tool Profile: iverilog-default'));
+
+		const fallbackLines = buildClassificationInspectorActiveContextLines(result, undefined);
+		assert.ok(fallbackLines.includes('Active Target Context: (unavailable)'));
 	});
 
 	test('Classification inspector scope arg resolver supports string and object payloads', () => {

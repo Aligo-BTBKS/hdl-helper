@@ -1426,3 +1426,31 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（80 passing）。
+
+## 2026-04-12 - Iteration 5 Day 41: Inspector Detail Context Enrichment
+
+- 目标: 继续推进 Iteration 5.5 inspector 细节可观测性，在单文件详情中补齐 active-target effective context 关键信息。
+- 变更文件:
+  - src/commands/debugProjectClassification.ts
+  - src/test/extension.test.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - `buildClassificationInspectorDetailLines` 新增 active context 输出字段：
+    - `Resolved Path`
+    - `In Active Target Resolved Files`
+    - `Effective Include Dirs`
+    - `Effective Defines`
+    - `Active Target Source Sets`
+    - `Active Target Filelist / Tool Profile`（可用时）
+  - 新增 helper：
+    - `buildClassificationInspectorActiveContextLines`
+    - `resolveClassificationInspectorActiveTargetContext`
+  - `inspectProjectClassification` 在输出详情前解析 active target context 并注入详情渲染。
+  - 回归补充：
+    - inspector 详情包含 active context 元数据测试
+    - active context 缺失时 fallback 文本测试
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（81 passing）。
