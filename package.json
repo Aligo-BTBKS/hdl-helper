@@ -553,6 +553,13 @@
           "default": "design",
           "description": "Heuristic 模式下未知路径 HDL 文件的默认角色。"
         },
+        "hdl-helper.workbench.classificationInspector.topFileLimit": {
+          "type": "number",
+          "default": 8,
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Classification Inspector Summary 中 Top Files Preview 的最大条目数。"
+        },
         "hdl-helper.projectConfig.enabled": {
           "type": "boolean",
           "default": false,

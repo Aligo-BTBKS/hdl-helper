@@ -1342,3 +1342,29 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（77 passing）。
+
+## 2026-04-12 - Iteration 5 Day 38: Configurable Summary Top-File Limit
+
+- 目标: 继续推进 Iteration 5.5 inspector 的可配置性，让 summary top-file preview 数量可由设置项控制。
+- 变更文件:
+  - src/commands/debugProjectClassification.ts
+  - src/test/extension.test.ts
+  - package.json
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - 新增设置项：
+    - `hdl-helper.workbench.classificationInspector.topFileLimit`
+    - 默认 `8`，范围 `1..50`
+  - `inspectProjectClassificationSummary` 读取该设置，并统一传递给：
+    - `buildClassificationInspectorSummaryLines`
+    - `buildClassificationInspectorTopFilePreviewEntries`
+  - 新增归一化 helper：
+    - `normalizeClassificationInspectorTopFileLimit`
+    - 支持无效值回退、越界钳制、浮点取整
+  - 回归补充：
+    - top-file limit 归一化行为测试
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（78 passing）。

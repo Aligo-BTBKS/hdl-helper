@@ -50,6 +50,10 @@ const sectionPriority: Record<ClassificationDebugSectionType, number> = {
     details: 60
 };
 
+const DEFAULT_INSPECTOR_TOP_FILE_LIMIT = 8;
+const MIN_INSPECTOR_TOP_FILE_LIMIT = 1;
+const MAX_INSPECTOR_TOP_FILE_LIMIT = 50;
+
 export function buildClassificationObservabilityStats(
     results: FileClassificationResult[]
 ): ClassificationObservabilityStats {
@@ -169,6 +173,7 @@ export function buildClassificationInspectorSummaryLines(
     scopePreset: ClassificationInspectorScopePreset = 'all',
     options: { workspaceName?: string; workspaceRoot?: string; topFileLimit?: number } = {}
 ): string[] {
+    const topFileLimit = normalizeClassificationInspectorTopFileLimit(options.topFileLimit, DEFAULT_INSPECTOR_TOP_FILE_LIMIT);
     const truthCounts: Record<string, number> = {};
     const roleCounts: Record<string, number> = {};
 
@@ -232,10 +237,10 @@ export function buildClassificationInspectorSummaryLines(
     }
 
     lines.push('');
-    lines.push(`Top Files Preview (up to ${options.topFileLimit || 8}):`);
+    lines.push(`Top Files Preview (up to ${topFileLimit}):`);
     lines.push(...buildClassificationInspectorTopFilePreviewLines(results, {
         workspaceRoot: options.workspaceRoot,
-        limit: options.topFileLimit
+        limit: topFileLimit
     }));
 
     lines.push('');
@@ -283,7 +288,7 @@ export function buildClassificationInspectorTopFilePreviewEntries(
             .localeCompare(toInspectorPath(b.uri, options.workspaceRoot));
     });
 
-    const limit = options.limit || 8;
+    const limit = normalizeClassificationInspectorTopFileLimit(options.limit, DEFAULT_INSPECTOR_TOP_FILE_LIMIT);
     const picked = sorted.slice(0, limit);
     if (picked.length === 0) {
         return [];
@@ -298,6 +303,25 @@ export function buildClassificationInspectorTopFilePreviewEntries(
             line: `  [${tags}] ${pathLabel} | truth=${result.sourceOfTruth} | role=${result.rolePrimary}`
         };
     });
+}
+
+export function normalizeClassificationInspectorTopFileLimit(
+    value: unknown,
+    fallback = DEFAULT_INSPECTOR_TOP_FILE_LIMIT
+): number {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+        return fallback;
+    }
+
+    const rounded = Math.trunc(value);
+    if (rounded < MIN_INSPECTOR_TOP_FILE_LIMIT) {
+        return MIN_INSPECTOR_TOP_FILE_LIMIT;
+    }
+    if (rounded > MAX_INSPECTOR_TOP_FILE_LIMIT) {
+        return MAX_INSPECTOR_TOP_FILE_LIMIT;
+    }
+
+    return rounded;
 }
 
 export function formatClassificationDebugReport(
@@ -615,15 +639,23 @@ export async function inspectProjectClassificationSummary(
         return;
     }
 
+    const config = vscode.workspace.getConfiguration('hdl-helper', folder.uri);
+    const topFileLimit = normalizeClassificationInspectorTopFileLimit(
+        config.get<number>('workbench.classificationInspector.topFileLimit'),
+        DEFAULT_INSPECTOR_TOP_FILE_LIMIT
+    );
+
     const topFileEntries = buildClassificationInspectorTopFilePreviewEntries(filteredResults, {
-        workspaceRoot: input.workspaceRoot
+        workspaceRoot: input.workspaceRoot,
+        limit: topFileLimit
     });
 
     outputChannel.clear();
     outputChannel.show(true);
     for (const line of buildClassificationInspectorSummaryLines(filteredResults, scopePreset, {
         workspaceName: input.workspaceName,
-        workspaceRoot: input.workspaceRoot
+        workspaceRoot: input.workspaceRoot,
+        topFileLimit
     })) {
         outputChannel.appendLine(line);
     }

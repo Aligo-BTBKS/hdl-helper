@@ -29,6 +29,7 @@ import {
 	buildClassificationInspectorSummaryLines,
 	buildClassificationInspectorTopFilePreviewEntries,
 	buildClassificationInspectorTopFilePreviewLines,
+	normalizeClassificationInspectorTopFileLimit,
 	buildClassificationDebugSections,
 	buildClassificationObservabilityStats,
 	buildClassificationRenderOptionsByPreset,
@@ -645,6 +646,15 @@ suite('Extension Test Suite', () => {
 		assert.strictEqual(entries.length, 2);
 		assert.strictEqual(entries[0].pathLabel, 'rtl/dut.sv');
 		assert.strictEqual(entries[1].pathLabel, 'shared/common_pkg.sv');
+	});
+
+	test('Classification inspector top file limit normalization clamps invalid values', () => {
+		assert.strictEqual(normalizeClassificationInspectorTopFileLimit(undefined), 8);
+		assert.strictEqual(normalizeClassificationInspectorTopFileLimit(-3), 1);
+		assert.strictEqual(normalizeClassificationInspectorTopFileLimit(0), 1);
+		assert.strictEqual(normalizeClassificationInspectorTopFileLimit(2.9), 2);
+		assert.strictEqual(normalizeClassificationInspectorTopFileLimit(100), 50);
+		assert.strictEqual(normalizeClassificationInspectorTopFileLimit(12), 12);
 	});
 
 	test('Classification debug formatter supports overview preset output', () => {

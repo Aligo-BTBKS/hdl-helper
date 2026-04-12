@@ -115,6 +115,11 @@ This guide lists workbench-related settings that can be configured directly in V
     - `HDL: Set as Design Top`
     - `HDL: Set as Simulation Top`
 
+- `hdl-helper.workbench.classificationInspector.topFileLimit`
+  - Controls the max number of entries in `Top Files Preview` for classification summary.
+  - Default: `8`
+  - Range: `1` to `50`
+
 - `hdl-helper.projectConfig.enabled`
   - Enable project.json-driven classification and context.
   - When enabled, explorer shows `Diagnostics` section with project config issues (missing/invalid config, unresolved target tops, validation warnings, and active-target fallback issues).
