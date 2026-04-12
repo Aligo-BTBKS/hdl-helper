@@ -1027,3 +1027,29 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（68 passing）。
+
+## 2026-04-12 - Iteration 5 Day 26: Preset Debug Command Entry
+
+- 目标: 按建议继续执行，将 section 过滤策略接入可交互命令入口，形成 overview/details 的真实使用闭环。
+- 变更文件:
+  - src/commands/debugProjectClassification.ts
+  - src/extension.ts
+  - src/test/extension.test.ts
+  - package.json
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - 新增命令 `HDL: Debug Project Classification (View...)`（`hdl-helper.debugProjectClassificationView`）。
+  - 新命令通过 QuickPick 选择 preset：
+    - `all`
+    - `overview`
+    - `details`
+  - `debugProjectClassification` 支持渲染选项输入；新增 helper `buildClassificationRenderOptionsByPreset(...)`。
+  - Quick Actions 与 Hierarchy Tools 均新增该入口，形成统一可达性。
+  - 新增最小回归测试：
+    - preset helper 输出映射
+    - overview preset 下 formatter 过滤行为
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（70 passing）。

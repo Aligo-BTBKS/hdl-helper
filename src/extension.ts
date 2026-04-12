@@ -326,6 +326,11 @@ export function activate(context: vscode.ExtensionContext) {
                 detail: 'Diagnostics'
             },
             {
+                label: 'Debug Project Classification (View...)',
+                description: 'Run classification debug with preset view (all/overview/details)',
+                detail: 'Diagnostics'
+            },
+            {
                 label: 'Open Dual Hierarchy Regression Checklist',
                 description: 'Open resources/regression/DUAL_HIERARCHY_MANUAL_REGRESSION.md',
                 detail: 'Diagnostics'
@@ -431,6 +436,10 @@ export function activate(context: vscode.ExtensionContext) {
             await vscode.commands.executeCommand('hdl-helper.debugRecentRunsByTarget');
             return;
         }
+        if (action.label === 'Debug Project Classification (View...)') {
+            await vscode.commands.executeCommand('hdl-helper.debugProjectClassificationView');
+            return;
+        }
         if (action.label === 'Open Dual Hierarchy Regression Checklist') {
             await vscode.commands.executeCommand('hdl-helper.openDualHierarchyRegressionChecklist');
             return;
@@ -508,6 +517,11 @@ export function activate(context: vscode.ExtensionContext) {
                 label: '[Diagnostics] Debug Recent Runs By Target',
                 description: 'Print target-keyed run history from workspace state',
                 command: 'hdl-helper.debugRecentRunsByTarget'
+            },
+            {
+                label: '[Diagnostics] Debug Project Classification (View...)',
+                description: 'Run classification debug with all/overview/details preset',
+                command: 'hdl-helper.debugProjectClassificationView'
             },
             {
                 label: '[Diagnostics] Dual Hierarchy Regression Checklist',
@@ -1109,6 +1123,34 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.debugProjectClassification', async () => {
         await debugProjectClassification(classificationOutputChannel);
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.debugProjectClassificationView', async () => {
+        const picked = await vscode.window.showQuickPick([
+            {
+                label: 'All Sections',
+                description: 'workspace + summary + coverage + details',
+                preset: 'all' as const
+            },
+            {
+                label: 'Overview',
+                description: 'workspace + summary + coverage',
+                preset: 'overview' as const
+            },
+            {
+                label: 'Details Only',
+                description: 'detailed file-by-file records only',
+                preset: 'details' as const
+            }
+        ], {
+            placeHolder: 'Select classification debug view preset'
+        });
+
+        if (!picked) {
+            return;
+        }
+
+        await debugProjectClassification(classificationOutputChannel, { preset: picked.preset });
     }));
 
     const targetContextOutputChannel = vscode.window.createOutputChannel('HDL Helper - Target Context');

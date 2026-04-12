@@ -48,9 +48,18 @@ export function buildClassificationObservabilityStats(
     };
 }
 
-export function formatClassificationDebugReport(input: ClassificationDebugReportInput): string[] {
+export function buildClassificationRenderOptionsByPreset(
+    preset: ClassificationDebugSectionFilterPreset = 'all'
+): ClassificationDebugSectionRenderOptions {
+    return { preset };
+}
+
+export function formatClassificationDebugReport(
+    input: ClassificationDebugReportInput,
+    options: ClassificationDebugSectionRenderOptions = {}
+): string[] {
     const sections = buildClassificationDebugSections(input);
-    return renderClassificationDebugSections(sections);
+    return renderClassificationDebugSections(sections, options);
 }
 
 export function buildClassificationDebugSections(
@@ -200,7 +209,8 @@ export function filterClassificationDebugSections(
  * Shows classification results in output channel.
  */
 export async function debugProjectClassification(
-    outputChannel: vscode.OutputChannel
+    outputChannel: vscode.OutputChannel,
+    renderOptions: ClassificationDebugSectionRenderOptions = {}
 ): Promise<void> {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
@@ -216,7 +226,7 @@ export async function debugProjectClassification(
     outputChannel.appendLine('');
 
     for (const folder of workspaceFolders) {
-        await debugWorkspaceFolder(folder, outputChannel);
+        await debugWorkspaceFolder(folder, outputChannel, renderOptions);
     }
 
     outputChannel.appendLine('');
@@ -227,7 +237,8 @@ export async function debugProjectClassification(
 
 async function debugWorkspaceFolder(
     folder: vscode.WorkspaceFolder,
-    outputChannel: vscode.OutputChannel
+    outputChannel: vscode.OutputChannel,
+    renderOptions: ClassificationDebugSectionRenderOptions
 ): Promise<void> {
     const workspaceRoot = folder.uri.fsPath;
 
@@ -273,7 +284,7 @@ async function debugWorkspaceFolder(
         roleCounts,
         stats,
         results
-    });
+    }, renderOptions);
 
     for (const line of lines) {
         outputChannel.appendLine(line);

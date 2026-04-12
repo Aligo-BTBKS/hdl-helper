@@ -26,6 +26,7 @@ import { buildTargetContextDebugSnapshot } from '../commands/debugActiveTargetCo
 import {
 	buildClassificationDebugSections,
 	buildClassificationObservabilityStats,
+	buildClassificationRenderOptionsByPreset,
 	filterClassificationDebugSections,
 	formatClassificationDebugReport,
 	getClassificationDebugSectionPriority,
@@ -404,6 +405,44 @@ suite('Extension Test Suite', () => {
 			includeTypes: ['details']
 		});
 		assert.deepStrictEqual(detailsOnly.map(section => section.type), ['details']);
+	});
+
+	test('Classification render options helper maps preset directly', () => {
+		assert.deepStrictEqual(buildClassificationRenderOptionsByPreset('all'), { preset: 'all' });
+		assert.deepStrictEqual(buildClassificationRenderOptionsByPreset('overview'), { preset: 'overview' });
+		assert.deepStrictEqual(buildClassificationRenderOptionsByPreset('details'), { preset: 'details' });
+	});
+
+	test('Classification debug formatter supports overview preset output', () => {
+		const lines = formatClassificationDebugReport({
+			workspaceName: 'repo',
+			workspaceRoot: 'C:/repo',
+			configStatus: ProjectConfigStatus.Valid,
+			hdlFileCount: 1,
+			roleCounts: { design: 1 },
+			stats: {
+				totalFiles: 1,
+				sharedFiles: 0,
+				activeTargetFiles: 1,
+				sourceSetCoverage: { design: 1 }
+			},
+			results: [
+				{
+					uri: 'C:/repo/rtl/dut.sv',
+					physicalType: PhysicalFileType.SystemVerilog,
+					rolePrimary: Role.Design,
+					roleSecondary: [],
+					sourceOfTruth: SourceOfTruth.ProjectConfig,
+					inActiveTarget: true,
+					referencedBySourceSets: ['design']
+				}
+			]
+		}, buildClassificationRenderOptionsByPreset('overview'));
+
+		assert.ok(lines.includes('Classification Summary:'));
+		assert.ok(lines.includes('SourceSet Coverage:'));
+		assert.ok(!lines.includes('Detailed Classification Results:'));
+		assert.ok(!lines.some(line => line.startsWith('File: C:/repo/rtl/dut.sv')));
 	});
 
 	test('Dual hierarchy keeps Design/Simulation tops independent', async () => {

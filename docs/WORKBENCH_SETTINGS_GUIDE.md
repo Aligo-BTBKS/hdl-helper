@@ -26,6 +26,8 @@ This guide lists workbench-related settings that can be configured directly in V
 - Quick Actions: `HDL: Quick Actions` -> `Debug Recent Runs By Target`
 - Command Palette: `HDL: Debug Current Project Classification`
 - Quick Actions: `HDL: Quick Actions` -> `Debug Current Project Classification`
+- Command Palette: `HDL: Debug Project Classification (View...)`
+- Quick Actions: `HDL: Quick Actions` -> `Debug Project Classification (View...)`
 - Command Palette: `HDL: Open Project Config`
 - Quick Actions: `HDL: Quick Actions` -> `Open Project Config`
 - Command Palette: `HDL: Open Last Waveform (Active Target)`
@@ -97,6 +99,10 @@ This guide lists workbench-related settings that can be configured directly in V
   - Classification debug generation now follows `section model -> text renderer` (`buildClassificationDebugSections` + `renderClassificationDebugSections`), allowing future inspector views to consume structured sections directly.
   - Classification sections now carry stable metadata (`id`, `type`) so downstream inspector/detail views can map, filter, and render sections deterministically without parsing titles.
   - Section rendering now supports unified priority and filter strategy (`getClassificationDebugSectionPriority`, preset-based type selection, and include/exclude filters), enabling consistent inspector view slicing (overview/details).
+  - Use `HDL: Debug Project Classification (View...)` to run classification debug with preset output scope:
+    - `All Sections`
+    - `Overview`
+    - `Details Only`
 
 - `hdl-helper.targetDrivenRuns.enabled`
   - Enable target-oriented run management.
