@@ -38,3 +38,6 @@ jobs:
 
       - name: Regression Fixture Matrix
         run: npm run check:fixture-matrix
+
+      - name: Debug Commands Sanity
+        run: npm run check:debug-commands-sanity

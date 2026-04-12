@@ -1810,3 +1810,41 @@
   - npm run -s check:project-config-integrity: 通过（当前根工作区无 `.hdl-helper/project.json`，按设计跳过）。
   - npm run -s check:fixture-matrix: 通过。
   - npm run -s check:fixture-sanity: 通过。
+
+## 2026-04-12 - Iteration 6 Day 53: Debug Command Sanity Closure
+
+- 目标: 收口 release checklist 的 Debug Commands Sanity 与 `invalid activeTarget` fallback 条目，建立可自动复跑的证据链。
+- 变更文件:
+  - scripts/run-debug-commands-sanity-report.cjs
+  - src/test/extension.test.ts
+  - package.json
+  - .github/workflows/ci.yml
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - resources/regression/README.md
+  - resources/regression/DEBUG_COMMANDS_SANITY_REPORT_2026-04-12.md
+  - resources/regression/SEMANTIC_WORKBENCH_RELEASE_CHECKLIST.md
+  - log1.md
+- 关键变更:
+  - 新增脚本 `run-debug-commands-sanity-report.cjs`：
+    - 校验 4 个 debug 命令在 `package.json` 中有贡献声明
+    - 校验 4 个 debug 命令在 `src/extension.ts` 中有注册
+    - 校验对应测试证据 token 存在
+    - 生成报告 `DEBUG_COMMANDS_SANITY_REPORT_2026-04-12.md`
+  - 新增 npm script：
+    - `check:debug-commands-sanity`
+  - `ci:gate` 扩展为：
+    - `compile + lint + project-config-integrity + fixture-matrix + debug-commands-sanity`
+  - GitHub Actions 新增 `Debug Commands Sanity` 步骤。
+  - 回归补充：
+    - 新增脚本级测试 `Debug commands sanity report script validates command wiring and writes report`
+    - 新增 `invalid activeTarget` fallback 直接断言测试
+  - release checklist 同步：
+    - Debug Commands Sanity 4 项勾选完成并附报告证据
+    - Fallback Mode 中 `Invalid activeTarget` 条目勾选完成并附测试证据
+- 验证:
+  - npm run -s compile: 通过。
+  - npm run -s lint: 通过。
+  - npm test -s: 通过（100 passing）。
+  - npm run -s check:debug-commands-sanity: 通过。
+  - npm run -s check:fixture-sanity: 通过。
+  - npm run -s check:fixture-matrix: 通过。

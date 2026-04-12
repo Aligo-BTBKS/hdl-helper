@@ -1307,6 +1307,44 @@ suite('Extension Test Suite', () => {
 		assert.strictEqual(snapshot.issues.some(issue => issue.includes('invalid')), false);
 	});
 
+	test('Active target context debug snapshot reports invalid activeTarget fallback', () => {
+		const snapshot = buildTargetContextDebugSnapshot({
+			workspaceName: 'repo',
+			workspaceRoot: 'C:/repo',
+			configEnabled: true,
+			configStatus: ProjectConfigStatus.Valid,
+			projectConfig: {
+				version: '1.0',
+				name: 'repo',
+				root: 'C:/repo',
+				sourceSets: {
+					design: {
+						name: 'design',
+						role: Role.Design,
+						includes: ['rtl/**/*.sv']
+					}
+				},
+				tops: {
+					design: 'dut_top',
+					simulation: 'tb_top'
+				},
+				targets: {
+					sim_default: {
+						id: 'sim_default',
+						kind: TargetKind.Simulation,
+						top: 'tb_top',
+						sourceSets: ['design']
+					}
+				},
+				activeTarget: 'sim_missing'
+			}
+		});
+
+		assert.strictEqual(snapshot.fallbackTarget, 'sim_default');
+		assert.strictEqual(snapshot.context?.targetId, 'sim_default');
+		assert.ok(snapshot.issues.some(issue => issue.includes("activeTarget 'sim_missing' is invalid")));
+	});
+
 	test('Config diagnostics builder reports missing project config in enabled mode', () => {
 		const issues = buildConfigIssues({
 			configEnabled: true,
@@ -1616,6 +1654,57 @@ suite('Extension Test Suite', () => {
 
 		const reportPath = path.join(tempRoot, 'resources', 'regression', 'FIXTURE_SANITY_REPORT_2026-04-12.md');
 		assert.ok(output.includes('Fixture sanity passed.'));
+		assert.ok(fs.existsSync(reportPath));
+
+		const reportContent = fs.readFileSync(reportPath, 'utf8');
+		assert.ok(reportContent.includes('Overall: passed'));
+		fs.rmSync(tempRoot, { recursive: true, force: true });
+	});
+
+	test('Debug commands sanity report script validates command wiring and writes report', () => {
+		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hdl-helper-debug-sanity-'));
+		const packagePath = path.join(tempRoot, 'package.json');
+		const extensionPath = path.join(tempRoot, 'src', 'extension.ts');
+		const testsPath = path.join(tempRoot, 'src', 'test', 'extension.test.ts');
+		const reportDir = path.join(tempRoot, 'resources', 'regression');
+		const scriptPath = path.resolve(__dirname, '..', '..', 'scripts', 'run-debug-commands-sanity-report.cjs');
+
+		fs.mkdirSync(path.dirname(extensionPath), { recursive: true });
+		fs.mkdirSync(path.dirname(testsPath), { recursive: true });
+		fs.mkdirSync(reportDir, { recursive: true });
+
+		fs.writeFileSync(packagePath, JSON.stringify({
+			contributes: {
+				commands: [
+					{ command: 'hdl-helper.debugProjectClassification' },
+					{ command: 'hdl-helper.debugActiveTargetContext' },
+					{ command: 'hdl-helper.debugRecentRunsByTarget' },
+					{ command: 'hdl-helper.debugToolchainHealthByProfile' }
+				]
+			}
+		}, null, 2), 'utf8');
+
+		fs.writeFileSync(extensionPath, [
+			"registerCommand('hdl-helper.debugProjectClassification'",
+			"registerCommand('hdl-helper.debugActiveTargetContext'",
+			"registerCommand('hdl-helper.debugRecentRunsByTarget'",
+			"registerCommand('hdl-helper.debugToolchainHealthByProfile'"
+		].join('\n'), 'utf8');
+
+		fs.writeFileSync(testsPath, [
+			'buildClassificationDebugSections',
+			'Active target context debug snapshot reports invalid activeTarget fallback',
+			'formatRunRecords(',
+			'buildToolchainStatusForProfile'
+		].join('\n'), 'utf8');
+
+		const output = cp.execFileSync(process.execPath, [scriptPath], {
+			cwd: tempRoot,
+			encoding: 'utf8'
+		});
+
+		const reportPath = path.join(reportDir, 'DEBUG_COMMANDS_SANITY_REPORT_2026-04-12.md');
+		assert.ok(output.includes('Debug command sanity passed.'));
 		assert.ok(fs.existsSync(reportPath));
 
 		const reportContent = fs.readFileSync(reportPath, 'utf8');
