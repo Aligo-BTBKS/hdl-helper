@@ -88,6 +88,7 @@ This guide lists workbench-related settings that can be configured directly in V
   - When enabled, explorer shows `Diagnostics` section with project config issues (missing/invalid config, unresolved target tops, validation warnings, and active-target fallback issues).
   - Active target context now resolves non-empty `resolvedFiles` from configured source sets using include/exclude patterns.
   - Source set file resolution is now centralized via `SourceSetService`, and `TargetContextService` consumes that service as the single source-set resolution path.
+  - Shared files referenced by multiple source sets now keep deterministic `primary role + secondary roles` semantics in classification results, and Sources tooltip shows secondary roles plus matched source set names.
 
 - `hdl-helper.targetDrivenRuns.enabled`
   - Enable target-oriented run management.

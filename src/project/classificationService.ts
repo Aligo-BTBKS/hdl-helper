@@ -19,6 +19,7 @@ import {
     SourceOfTruth,
     NormalizedProjectConfig
 } from './types';
+import { SourceSetService } from './sourceSetService';
 
 /**
  * Classification context for a workspace.
@@ -35,9 +36,11 @@ export interface ClassificationContext {
  */
 export class ClassificationService {
     private context: ClassificationContext;
+    private sourceSetService?: SourceSetService;
 
     constructor(context: ClassificationContext) {
         this.context = context;
+        this.initializeSourceSetService();
     }
 
     // ========================================================================
@@ -80,6 +83,16 @@ export class ClassificationService {
      */
     public updateContext(context: Partial<ClassificationContext>): void {
         this.context = { ...this.context, ...context };
+        this.initializeSourceSetService();
+    }
+
+    private initializeSourceSetService(): void {
+        if (!this.context.projectConfig) {
+            this.sourceSetService = undefined;
+            return;
+        }
+
+        this.sourceSetService = new SourceSetService(this.context.workspaceRoot, this.context.projectConfig);
     }
 
     // ========================================================================
@@ -91,114 +104,24 @@ export class ClassificationService {
             return undefined;
         }
 
-        const relativePath = this.getRelativePath(uri);
         const physicalType = this.detectPhysicalType(uri);
-        
-        // Check each source set for matches
-        const matchedSets: string[] = [];
-        let primaryRole: Role = Role.Unassigned;
-        
-        for (const [name, sourceSet] of Object.entries(this.context.projectConfig.sourceSets)) {
-            if (this.matchesSourceSet(relativePath, sourceSet.includes, sourceSet.excludes)) {
-                matchedSets.push(name);
-                if (primaryRole === Role.Unassigned) {
-                    primaryRole = sourceSet.role;
-                }
-            }
+        const roleSnapshot = this.sourceSetService?.getRoleSnapshotForFile(uri.fsPath);
+
+        if (!roleSnapshot) {
+            return undefined;
         }
 
-        if (matchedSets.length > 0) {
-            // Determine if in active target
-            const inActiveTarget = this.isInActiveTarget(matchedSets);
-            
-            // Collect secondary roles
-            const secondaryRoles = this.collectSecondaryRoles(matchedSets, primaryRole);
+        const inActiveTarget = this.isInActiveTarget(roleSnapshot.referencedBySourceSets);
 
-            return {
-                uri: uri.fsPath,
-                physicalType,
-                rolePrimary: primaryRole,
-                roleSecondary: secondaryRoles,
-                sourceOfTruth: SourceOfTruth.ProjectConfig,
-                inActiveTarget,
-                referencedBySourceSets: matchedSets
-            };
-        }
-
-        return undefined;
-    }
-
-    private matchesSourceSet(
-        relativePath: string,
-        includes: string[],
-        excludes?: string[]
-    ): boolean {
-        // TODO: Implement glob pattern matching
-        // For now, simple path prefix matching
-        
-        // Check excludes first
-        if (excludes) {
-            for (const pattern of excludes) {
-                if (this.matchesPattern(relativePath, pattern)) {
-                    return false;
-                }
-            }
-        }
-
-        // Check includes
-        for (const pattern of includes) {
-            if (this.matchesPattern(relativePath, pattern)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private matchesPattern(filePath: string, pattern: string): boolean {
-        // Enhanced glob pattern matching
-        const normalizedPath = filePath.replace(/\\/g, '/');
-        const normalizedPattern = pattern.replace(/\\/g, '/');
-        
-        // Exact match
-        if (normalizedPath === normalizedPattern) {
-            return true;
-        }
-
-        // Directory prefix match (pattern ends with / or /*)
-        if (normalizedPattern.endsWith('/') || normalizedPattern.endsWith('/*')) {
-            const dir = normalizedPattern.replace(/\/\*?$/, '');
-            return normalizedPath.startsWith(dir + '/');
-        }
-
-        // Glob pattern matching
-        if (normalizedPattern.includes('*') || normalizedPattern.includes('?')) {
-            return this.globMatch(normalizedPath, normalizedPattern);
-        }
-
-        // Prefix match for directory patterns
-        if (normalizedPath.startsWith(normalizedPattern + '/')) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Simple glob matcher supporting wildcards.
-     * Supports common patterns like recursive, single level, prefix and suffix matches.
-     */
-    private globMatch(path: string, pattern: string): boolean {
-        // Convert glob pattern to regex
-        let regexPattern = pattern
-            .replace(/\./g, '\\.')  // Escape dots
-            .replace(/\*\*/g, '§§') // Placeholder for **
-            .replace(/\*/g, '[^/]*') // * matches anything except /
-            .replace(/§§/g, '.*')    // ** matches anything including /
-            .replace(/\?/g, '.');    // ? matches single char
-
-        const regex = new RegExp('^' + regexPattern + '$');
-        return regex.test(path);
+        return {
+            uri: uri.fsPath,
+            physicalType,
+            rolePrimary: roleSnapshot.rolePrimary,
+            roleSecondary: roleSnapshot.roleSecondary,
+            sourceOfTruth: SourceOfTruth.ProjectConfig,
+            inActiveTarget,
+            referencedBySourceSets: roleSnapshot.referencedBySourceSets
+        };
     }
 
     private isInActiveTarget(matchedSets: string[]): boolean {
@@ -213,24 +136,6 @@ export class ClassificationService {
 
         // Check if any matched set is in active target's source sets
         return matchedSets.some(setName => target.sourceSets.includes(setName));
-    }
-
-    private collectSecondaryRoles(matchedSets: string[], primaryRole: Role): Role[] {
-        if (!this.context.projectConfig) {
-            return [];
-        }
-
-        const secondaryRoles: Role[] = [];
-        for (const setName of matchedSets) {
-            const sourceSet = this.context.projectConfig.sourceSets[setName];
-            if (sourceSet && sourceSet.role !== primaryRole) {
-                if (!secondaryRoles.includes(sourceSet.role)) {
-                    secondaryRoles.push(sourceSet.role);
-                }
-            }
-        }
-
-        return secondaryRoles;
     }
 
     // ========================================================================

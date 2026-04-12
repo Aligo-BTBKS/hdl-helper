@@ -870,3 +870,28 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（57 passing）。
+
+## 2026-04-12 - Iteration 5 Day 19: Shared File Role Semantics Alignment
+
+- 目标: 继续推进 Iteration 5，将 `SourceSetService` 与 `ClassificationService` 对齐，落实 shared file 的 primary/secondary role 语义链路。
+- 变更文件:
+  - src/project/sourceSetService.ts
+  - src/project/classificationService.ts
+  - src/project/hdlTreeProvider.ts
+  - src/test/extension.test.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - `SourceSetService` 新增 per-file 语义接口：
+    - `getMatchedSourceSetsForFile(filePath)`
+    - `getRoleSnapshotForFile(filePath)`
+  - `ClassificationService` 的 config-driven 分支改为调用 `SourceSetService` 统一匹配逻辑，避免 source-set 规则重复实现。
+  - shared file 分类结果中保留 deterministic `rolePrimary + roleSecondary + referencedBySourceSets`。
+  - Sources tooltip 增强显示 secondary roles 与 source set 列表，便于定位 shared-file 语义来源。
+  - 新增最小回归测试：
+    - `Classification config mode reports primary and secondary roles for shared source-set file`
+    - `Source set service exposes primary and secondary roles for shared file`
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（59 passing）。

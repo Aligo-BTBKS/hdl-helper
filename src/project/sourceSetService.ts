@@ -6,7 +6,13 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { NormalizedProjectConfig } from './types';
+import { NormalizedProjectConfig, Role } from './types';
+
+export interface SourceSetRoleSnapshot {
+    rolePrimary: Role;
+    roleSecondary: Role[];
+    referencedBySourceSets: string[];
+}
 
 export class SourceSetService {
     private workspaceRoot: string;
@@ -42,6 +48,62 @@ export class SourceSetService {
         return Array.from(files).sort((a, b) => a.localeCompare(b));
     }
 
+    public getMatchedSourceSetsForFile(filePath: string): string[] {
+        if (!this.projectConfig) {
+            return [];
+        }
+
+        const absolutePath = path.isAbsolute(filePath)
+            ? path.normalize(filePath)
+            : path.normalize(path.join(this.workspaceRoot, filePath));
+        const relativePath = this.toRelativePath(absolutePath);
+        const matched: string[] = [];
+
+        for (const [setName, sourceSet] of Object.entries(this.projectConfig.sourceSets)) {
+            if (this.matchesSourceSet(relativePath, absolutePath, sourceSet.includes, sourceSet.excludes)) {
+                matched.push(setName);
+            }
+        }
+
+        return matched;
+    }
+
+    public getRoleSnapshotForFile(filePath: string): SourceSetRoleSnapshot | undefined {
+        if (!this.projectConfig) {
+            return undefined;
+        }
+
+        const matchedSets = this.getMatchedSourceSetsForFile(filePath);
+        if (matchedSets.length === 0) {
+            return undefined;
+        }
+
+        let rolePrimary: Role = Role.Unassigned;
+        const roleSecondary: Role[] = [];
+
+        for (const setName of matchedSets) {
+            const role = this.projectConfig.sourceSets[setName]?.role;
+            if (!role) {
+                continue;
+            }
+
+            if (rolePrimary === Role.Unassigned) {
+                rolePrimary = role;
+                continue;
+            }
+
+            if (role !== rolePrimary && !roleSecondary.includes(role)) {
+                roleSecondary.push(role);
+            }
+        }
+
+        return {
+            rolePrimary,
+            roleSecondary,
+            referencedBySourceSets: matchedSets
+        };
+    }
+
     public resolveSourceSetFiles(setName: string): string[] {
         if (!this.projectConfig) {
             return [];
@@ -60,20 +122,29 @@ export class SourceSetService {
         const workspaceFiles = this.getWorkspaceFiles();
         const resolved = workspaceFiles.filter(filePath => {
             const relPath = this.toRelativePath(filePath);
-            const included = sourceSet.includes.some(pattern => this.matchesPattern(relPath, filePath, pattern));
-            if (!included) {
-                return false;
-            }
-
-            if (!sourceSet.excludes || sourceSet.excludes.length === 0) {
-                return true;
-            }
-
-            return !sourceSet.excludes.some(pattern => this.matchesPattern(relPath, filePath, pattern));
+            return this.matchesSourceSet(relPath, filePath, sourceSet.includes, sourceSet.excludes);
         });
 
         this.sourceSetFilesCache.set(setName, resolved);
         return resolved;
+    }
+
+    private matchesSourceSet(
+        relativePath: string,
+        absolutePath: string,
+        includes: string[],
+        excludes?: string[]
+    ): boolean {
+        const included = includes.some(pattern => this.matchesPattern(relativePath, absolutePath, pattern));
+        if (!included) {
+            return false;
+        }
+
+        if (!excludes || excludes.length === 0) {
+            return true;
+        }
+
+        return !excludes.some(pattern => this.matchesPattern(relativePath, absolutePath, pattern));
     }
 
     private getWorkspaceFiles(): string[] {

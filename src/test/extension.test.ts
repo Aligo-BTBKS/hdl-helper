@@ -8,7 +8,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { FilelistParser } from '../project/filelistParser';
 import { ClassificationService } from '../project/classificationService';
-import { NormalizedProjectConfig, ProjectConfigStatus, Role, TargetKind } from '../project/types';
+import { NormalizedProjectConfig, ProjectConfigStatus, Role, SourceOfTruth, TargetKind } from '../project/types';
 import { getLatestLogEntries, getLatestWaveformEntries, HdlTreeProvider, prioritizeTargetEntries } from '../project/hdlTreeProvider';
 import { HdlInstance, HdlModule, HdlPort } from '../project/hdlSymbol';
 import { mapLegacyTopSelection } from '../project/topSelectionPolicy';
@@ -130,6 +130,60 @@ suite('Extension Test Suite', () => {
 		assert.strictEqual(unknownHdl.rolePrimary, Role.Design);
 		assert.strictEqual(testbenchByName.rolePrimary, Role.Simulation);
 		assert.strictEqual(checkerByName.rolePrimary, Role.Verification);
+	});
+
+	test('Classification config mode reports primary and secondary roles for shared source-set file', () => {
+		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hdl-helper-classification-shared-'));
+		const sharedDir = path.join(tempRoot, 'shared');
+		fs.mkdirSync(sharedDir, { recursive: true });
+
+		const sharedPath = path.join(sharedDir, 'common_pkg.sv');
+		fs.writeFileSync(sharedPath, 'package common_pkg; endpackage\n', 'utf8');
+
+		const projectConfig: NormalizedProjectConfig = {
+			version: '1.0',
+			name: 'repo',
+			root: tempRoot,
+			sourceSets: {
+				design: {
+					name: 'design',
+					role: Role.Design,
+					includes: ['shared/**/*.sv']
+				},
+				verification: {
+					name: 'verification',
+					role: Role.Verification,
+					includes: ['shared/**/*.sv']
+				}
+			},
+			tops: {
+				design: 'dut_top'
+			},
+			targets: {
+				design_default: {
+					id: 'design_default',
+					kind: TargetKind.Design,
+					top: 'dut_top',
+					sourceSets: ['design']
+				}
+			},
+			activeTarget: 'design_default'
+		};
+
+		const service = new ClassificationService({
+			workspaceRoot: tempRoot,
+			projectConfig,
+			activeTarget: 'design_default'
+		});
+
+		const result = service.classifyFile(vscode.Uri.file(sharedPath));
+		assert.strictEqual(result.sourceOfTruth, SourceOfTruth.ProjectConfig);
+		assert.strictEqual(result.rolePrimary, Role.Design);
+		assert.deepStrictEqual(result.roleSecondary, [Role.Verification]);
+		assert.deepStrictEqual(result.referencedBySourceSets, ['design', 'verification']);
+		assert.strictEqual(result.inActiveTarget, true);
+
+		fs.rmSync(tempRoot, { recursive: true, force: true });
 	});
 
 	test('Dual hierarchy keeps Design/Simulation tops independent', async () => {
@@ -425,6 +479,44 @@ suite('Extension Test Suite', () => {
 		assert.ok(resolved.includes(path.normalize(dutPath)));
 		assert.ok(resolved.includes(path.normalize(tbPath)));
 		assert.ok(resolved.includes(path.normalize(sharedPath)));
+
+		fs.rmSync(tempRoot, { recursive: true, force: true });
+	});
+
+	test('Source set service exposes primary and secondary roles for shared file', () => {
+		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hdl-helper-source-set-shared-role-'));
+		const sharedDir = path.join(tempRoot, 'shared');
+		fs.mkdirSync(sharedDir, { recursive: true });
+		const sharedPath = path.join(sharedDir, 'common_pkg.sv');
+		fs.writeFileSync(sharedPath, 'package common_pkg; endpackage\n', 'utf8');
+
+		const projectConfig: NormalizedProjectConfig = {
+			version: '1.0',
+			name: 'repo',
+			root: tempRoot,
+			sourceSets: {
+				design: {
+					name: 'design',
+					role: Role.Design,
+					includes: ['shared/**/*.sv']
+				},
+				simulation: {
+					name: 'simulation',
+					role: Role.Simulation,
+					includes: ['shared/**/*.sv']
+				}
+			},
+			tops: {},
+			targets: {}
+		};
+
+		const service = new SourceSetService(tempRoot, projectConfig);
+		const snapshot = service.getRoleSnapshotForFile(sharedPath);
+
+		assert.ok(snapshot);
+		assert.strictEqual(snapshot?.rolePrimary, Role.Design);
+		assert.deepStrictEqual(snapshot?.roleSecondary, [Role.Simulation]);
+		assert.deepStrictEqual(snapshot?.referencedBySourceSets, ['design', 'simulation']);
 
 		fs.rmSync(tempRoot, { recursive: true, force: true });
 	});

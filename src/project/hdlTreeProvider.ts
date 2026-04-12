@@ -192,6 +192,12 @@ class SourceFileItem extends vscode.TreeItem {
         tip.supportHtml = false;
         tip.appendMarkdown(`**${path.basename(file.uri)}**\n\n`);
         tip.appendMarkdown(`- Role: ${file.rolePrimary}\n`);
+        if (file.roleSecondary.length > 0) {
+            tip.appendMarkdown(`- Secondary Roles: ${file.roleSecondary.join(', ')}\n`);
+        }
+        if (file.referencedBySourceSets && file.referencedBySourceSets.length > 0) {
+            tip.appendMarkdown(`- Source Sets: ${file.referencedBySourceSets.join(', ')}\n`);
+        }
         tip.appendMarkdown(`- Source: ${SourceFileItem.sourceTag(file.sourceOfTruth)}\n`);
         tip.appendMarkdown(`- In Active Target: ${file.inActiveTarget ? 'yes' : 'no'}\n`);
         tip.appendMarkdown(`- Path: ${file.uri}`);
