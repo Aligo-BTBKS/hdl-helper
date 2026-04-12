@@ -958,3 +958,23 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（63 passing）。
+
+## 2026-04-12 - Iteration 5 Day 23: Section Model and Renderer Split
+
+- 目标: 继续推进 Iteration 5，将分类调试输出从单一文本 formatter 拆分为 section model + renderer，为 Inspector 结构化复用铺路。
+- 变更文件:
+  - src/commands/debugProjectClassification.ts
+  - src/test/extension.test.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - 新增结构化构建函数：`buildClassificationDebugSections(...)`。
+  - 新增渲染函数：`renderClassificationDebugSections(...)`。
+  - `formatClassificationDebugReport(...)` 改为组合上述两步，保持已有文本输出契约。
+  - 新增最小回归测试：
+    - `Classification debug section builder returns expected section titles`
+    - `Classification debug section renderer emits headers and trailing separator`
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（65 passing）。

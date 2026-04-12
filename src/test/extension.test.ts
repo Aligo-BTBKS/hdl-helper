@@ -23,7 +23,12 @@ import {
 	inferDefaultTops
 } from '../commands/createProjectConfig';
 import { buildTargetContextDebugSnapshot } from '../commands/debugActiveTargetContext';
-import { buildClassificationObservabilityStats, formatClassificationDebugReport } from '../commands/debugProjectClassification';
+import {
+	buildClassificationDebugSections,
+	buildClassificationObservabilityStats,
+	formatClassificationDebugReport,
+	renderClassificationDebugSections
+} from '../commands/debugProjectClassification';
 import { getProjectConfigPath, openProjectConfig } from '../commands/openProjectConfig';
 import { formatRunRecords } from '../commands/debugRecentRuns';
 import { pickRunRecordForTarget } from '../commands/openLastWaveformByTarget';
@@ -322,6 +327,40 @@ suite('Extension Test Suite', () => {
 		const designIndex = lines.indexOf('  design: 1 files');
 		const simulationIndex = lines.indexOf('  simulation: 1 files');
 		assert.ok(designIndex >= 0 && simulationIndex >= 0 && designIndex < simulationIndex);
+	});
+
+	test('Classification debug section builder returns expected section titles', () => {
+		const sections = buildClassificationDebugSections({
+			workspaceName: 'repo',
+			workspaceRoot: 'C:/repo',
+			configStatus: ProjectConfigStatus.Valid,
+			hdlFileCount: 0,
+			roleCounts: {},
+			stats: {
+				totalFiles: 0,
+				sharedFiles: 0,
+				activeTargetFiles: 0,
+				sourceSetCoverage: {}
+			},
+			results: []
+		});
+
+		assert.deepStrictEqual(
+			sections.map(section => section.title),
+			['', '', '', 'Classification Summary:', 'SourceSet Coverage:', 'Detailed Classification Results:']
+		);
+	});
+
+	test('Classification debug section renderer emits headers and trailing separator', () => {
+		const rendered = renderClassificationDebugSections([
+			{ title: 'Section A', lines: ['  line-a'] },
+			{ title: '', lines: ['  line-b'] }
+		]);
+
+		assert.ok(rendered.includes('Section A'));
+		assert.ok(rendered.includes('  line-a'));
+		assert.ok(rendered.includes('  line-b'));
+		assert.strictEqual(rendered[rendered.length - 1], '-'.repeat(80));
 	});
 
 	test('Dual hierarchy keeps Design/Simulation tops independent', async () => {

@@ -186,6 +186,14 @@ export interface ClassificationDebugReportInput {
     results: FileClassificationResult[];
 }
 
+/**
+ * Structured section model for classification debug rendering.
+ */
+export interface ClassificationDebugSection {
+    title: string;
+    lines: string[];
+}
+
 // ============================================================================
 // Target Context Types
 // ============================================================================

@@ -94,6 +94,7 @@ This guide lists workbench-related settings that can be configured directly in V
   - `HDL: Debug Current Project Classification` now includes observability summary for shared-file count, active-target-covered file count, and per-source-set file coverage.
   - Classification debug output now uses a reusable report formatter template (`formatClassificationDebugReport`), so the same output model can be reused by future inspector/detail views.
   - The formatter input/observability structures are now defined in shared project types (`ClassificationDebugReportInput`, `ClassificationObservabilityStats`) to avoid command-local type drift.
+  - Classification debug generation now follows `section model -> text renderer` (`buildClassificationDebugSections` + `renderClassificationDebugSections`), allowing future inspector views to consume structured sections directly.
 
 - `hdl-helper.targetDrivenRuns.enabled`
   - Enable target-oriented run management.

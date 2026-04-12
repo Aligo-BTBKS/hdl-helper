@@ -11,6 +11,7 @@ import * as vscode from 'vscode';
 import { ClassificationService } from '../project/classificationService';
 import { ProjectConfigService } from '../project/projectConfigService';
 import {
+    ClassificationDebugSection,
     ClassificationDebugReportInput,
     ClassificationObservabilityStats,
     FileClassificationResult
@@ -36,67 +37,89 @@ export function buildClassificationObservabilityStats(
 }
 
 export function formatClassificationDebugReport(input: ClassificationDebugReportInput): string[] {
-    const lines: string[] = [];
-    lines.push(`Workspace: ${input.workspaceName}`);
-    lines.push(`Root: ${input.workspaceRoot}`);
-    lines.push('');
+    const sections = buildClassificationDebugSections(input);
+    return renderClassificationDebugSections(sections);
+}
 
-    lines.push(`Project Config Status: ${input.configStatus}`);
+export function buildClassificationDebugSections(
+    input: ClassificationDebugReportInput
+): ClassificationDebugSection[] {
+    const workspaceLines: string[] = [
+        `Workspace: ${input.workspaceName}`,
+        `Root: ${input.workspaceRoot}`
+    ];
+
+    const configLines: string[] = [`Project Config Status: ${input.configStatus}`];
     if (input.config) {
-        lines.push(`  Name: ${input.config.name}`);
-        lines.push(`  Version: ${input.config.version}`);
-        lines.push(`  Source Sets: ${input.config.sourceSetCount}`);
-        lines.push(`  Targets: ${input.config.targetCount}`);
-        lines.push(`  Active Target: ${input.config.activeTarget || 'none'}`);
+        configLines.push(`  Name: ${input.config.name}`);
+        configLines.push(`  Version: ${input.config.version}`);
+        configLines.push(`  Source Sets: ${input.config.sourceSetCount}`);
+        configLines.push(`  Targets: ${input.config.targetCount}`);
+        configLines.push(`  Active Target: ${input.config.activeTarget || 'none'}`);
     }
-    lines.push('');
 
-    lines.push(`Found ${input.hdlFileCount} HDL files`);
-    lines.push('');
+    const discoveryLines: string[] = [`Found ${input.hdlFileCount} HDL files`];
 
-    lines.push('Classification Summary:');
-    lines.push('-'.repeat(80));
+    const summaryLines: string[] = ['-'.repeat(80)];
     const roles = Object.keys(input.roleCounts).sort((a, b) => a.localeCompare(b));
     for (const role of roles) {
-        lines.push(`  ${role}: ${input.roleCounts[role]} files`);
+        summaryLines.push(`  ${role}: ${input.roleCounts[role]} files`);
     }
-    lines.push(`  shared files: ${input.stats.sharedFiles}`);
-    lines.push(`  active target files: ${input.stats.activeTargetFiles}`);
-    lines.push('');
+    summaryLines.push(`  shared files: ${input.stats.sharedFiles}`);
+    summaryLines.push(`  active target files: ${input.stats.activeTargetFiles}`);
 
-    lines.push('SourceSet Coverage:');
+    const sourceSetCoverageLines: string[] = [];
     const sourceSetNames = Object.keys(input.stats.sourceSetCoverage).sort((a, b) => a.localeCompare(b));
     if (sourceSetNames.length === 0) {
-        lines.push('  (none)');
+        sourceSetCoverageLines.push('  (none)');
     } else {
         for (const sourceSetName of sourceSetNames) {
-            lines.push(`  ${sourceSetName}: ${input.stats.sourceSetCoverage[sourceSetName]} files`);
+            sourceSetCoverageLines.push(`  ${sourceSetName}: ${input.stats.sourceSetCoverage[sourceSetName]} files`);
         }
     }
-    lines.push('');
 
-    lines.push('Detailed Classification Results:');
-    lines.push('-'.repeat(80));
-
+    const detailLines: string[] = ['-'.repeat(80)];
     for (const result of input.results) {
-        lines.push('');
-        lines.push(`File: ${result.uri}`);
-        lines.push(`  Physical Type: ${result.physicalType}`);
-        lines.push(`  Role (Primary): ${result.rolePrimary}`);
+        detailLines.push('');
+        detailLines.push(`File: ${result.uri}`);
+        detailLines.push(`  Physical Type: ${result.physicalType}`);
+        detailLines.push(`  Role (Primary): ${result.rolePrimary}`);
         if (result.roleSecondary.length > 0) {
-            lines.push(`  Role (Secondary): ${result.roleSecondary.join(', ')}`);
+            detailLines.push(`  Role (Secondary): ${result.roleSecondary.join(', ')}`);
         }
-        lines.push(`  Source of Truth: ${result.sourceOfTruth}`);
-        lines.push(`  In Active Target: ${result.inActiveTarget}`);
+        detailLines.push(`  Source of Truth: ${result.sourceOfTruth}`);
+        detailLines.push(`  In Active Target: ${result.inActiveTarget}`);
         if (result.referencedBySourceSets && result.referencedBySourceSets.length > 0) {
-            lines.push(`  Referenced by Source Sets: ${result.referencedBySourceSets.join(', ')}`);
+            detailLines.push(`  Referenced by Source Sets: ${result.referencedBySourceSets.join(', ')}`);
         }
         if (result.referencedByTargets && result.referencedByTargets.length > 0) {
-            lines.push(`  Referenced by Targets: ${result.referencedByTargets.join(', ')}`);
+            detailLines.push(`  Referenced by Targets: ${result.referencedByTargets.join(', ')}`);
         }
     }
 
-    lines.push('');
+    return [
+        { title: '', lines: workspaceLines },
+        { title: '', lines: configLines },
+        { title: '', lines: discoveryLines },
+        { title: 'Classification Summary:', lines: summaryLines },
+        { title: 'SourceSet Coverage:', lines: sourceSetCoverageLines },
+        { title: 'Detailed Classification Results:', lines: detailLines }
+    ];
+}
+
+export function renderClassificationDebugSections(
+    sections: ClassificationDebugSection[]
+): string[] {
+    const lines: string[] = [];
+
+    for (const section of sections) {
+        if (section.title) {
+            lines.push(section.title);
+        }
+        lines.push(...section.lines);
+        lines.push('');
+    }
+
     lines.push('-'.repeat(80));
     return lines;
 }
