@@ -35,3 +35,6 @@ jobs:
 
       - name: Project Config Integrity
         run: npm run check:project-config-integrity
+
+      - name: Regression Fixture Matrix
+        run: npm run check:fixture-matrix

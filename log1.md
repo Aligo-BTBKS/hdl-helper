@@ -1689,3 +1689,37 @@
   - npm run -s compile: 通过。
   - npm run -s lint: 通过。
   - npm test -s: 通过（96 passing）。
+
+## 2026-04-12 - Iteration 6 Day 50: Fixture Matrix Gate Foundation
+
+- 目标: 继续推进 Iteration 6 发布门禁收口，将 mandatory fixture matrix 从文档约束升级为可执行的自动检查门禁。
+- 变更文件:
+  - scripts/check-regression-fixture-matrix.cjs
+  - resources/regression/fixtures/pure_rtl_project/README.md
+  - resources/regression/fixtures/rtl_tb_sva_project/README.md
+  - resources/regression/fixtures/multi_top_project/README.md
+  - resources/regression/fixtures/heuristic_only_project/README.md
+  - resources/regression/fixtures/shared_file_project/README.md
+  - resources/regression/fixtures/filelist_narrow_project/README.md
+  - package.json
+  - .github/workflows/ci.yml
+  - src/test/extension.test.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - 新增脚本 `check-regression-fixture-matrix.cjs`：
+    - 校验 6 个 required fixture 目录存在
+    - 校验每个 fixture README 存在并覆盖 5 个最小检查 token
+  - 新增 npm script：
+    - `check:fixture-matrix`
+  - `ci:gate` 扩展为：
+    - `compile + lint + project-config-integrity + fixture-matrix`
+  - GitHub Actions 新增 fixture-matrix 步骤，纳入 PR/main 自动门禁。
+  - 新建 `resources/regression/fixtures/*` 六个目录及 README 模板，作为后续 fixture 实体化占位。
+  - 回归补充：
+    - 新增脚本级测试，验证 fixture-matrix 检查通过路径。
+- 验证:
+  - npm run -s compile: 通过。
+  - npm run -s lint: 通过。
+  - npm test -s: 通过（97 passing）。
+  - npm run -s check:fixture-matrix: 通过。

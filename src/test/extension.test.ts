@@ -1495,6 +1495,42 @@ suite('Extension Test Suite', () => {
 		fs.rmSync(tempRoot, { recursive: true, force: true });
 	});
 
+	test('Regression fixture matrix script validates required fixture directories and checklist tokens', () => {
+		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hdl-helper-fixture-matrix-'));
+		const fixtureRoot = path.join(tempRoot, 'resources', 'regression', 'fixtures');
+		const scriptPath = path.resolve(__dirname, '..', '..', 'scripts', 'check-regression-fixture-matrix.cjs');
+
+		const fixtureNames = [
+			'pure_rtl_project',
+			'rtl_tb_sva_project',
+			'multi_top_project',
+			'heuristic_only_project',
+			'shared_file_project',
+			'filelist_narrow_project'
+		];
+
+		for (const fixtureName of fixtureNames) {
+			const fixtureDir = path.join(fixtureRoot, fixtureName);
+			fs.mkdirSync(fixtureDir, { recursive: true });
+			fs.writeFileSync(path.join(fixtureDir, 'README.md'), [
+				'# fixture',
+				'- sources grouping',
+				'- hierarchy roots',
+				'- target context resolution',
+				'- run resolution',
+				'- diagnostics behavior'
+			].join('\n'), 'utf8');
+		}
+
+		const output = cp.execFileSync(process.execPath, [scriptPath], {
+			cwd: tempRoot,
+			encoding: 'utf8'
+		});
+
+		assert.ok(output.includes('Fixture matrix check passed.'));
+		fs.rmSync(tempRoot, { recursive: true, force: true });
+	});
+
 	test('Toolchain profile collector returns sorted deduplicated profile list', () => {
 		const profiles = collectToolchainProfileNames({
 			version: '1.0',
