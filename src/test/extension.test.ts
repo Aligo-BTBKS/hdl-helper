@@ -31,6 +31,7 @@ import {
 	formatClassificationDebugReport,
 	getClassificationDebugSectionPriority,
 	getClassificationDebugSectionTypesByPreset,
+	resolveClassificationDebugPresetArg,
 	renderClassificationDebugSections
 } from '../commands/debugProjectClassification';
 import { getProjectConfigPath, openProjectConfig } from '../commands/openProjectConfig';
@@ -411,6 +412,16 @@ suite('Extension Test Suite', () => {
 		assert.deepStrictEqual(buildClassificationRenderOptionsByPreset('all'), { preset: 'all' });
 		assert.deepStrictEqual(buildClassificationRenderOptionsByPreset('overview'), { preset: 'overview' });
 		assert.deepStrictEqual(buildClassificationRenderOptionsByPreset('details'), { preset: 'details' });
+	});
+
+	test('Classification preset arg resolver supports string and object payloads', () => {
+		assert.strictEqual(resolveClassificationDebugPresetArg('overview'), 'overview');
+		assert.strictEqual(resolveClassificationDebugPresetArg('DETAILS'), 'details');
+		assert.strictEqual(resolveClassificationDebugPresetArg({ preset: 'all' }), 'all');
+		assert.strictEqual(resolveClassificationDebugPresetArg({ view: 'overview' }), 'overview');
+		assert.strictEqual(resolveClassificationDebugPresetArg({ mode: 'details' }), 'details');
+		assert.strictEqual(resolveClassificationDebugPresetArg('unknown'), undefined);
+		assert.strictEqual(resolveClassificationDebugPresetArg({ preset: 'unknown' }), undefined);
 	});
 
 	test('Classification debug formatter supports overview preset output', () => {

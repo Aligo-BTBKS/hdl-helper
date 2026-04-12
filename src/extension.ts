@@ -12,7 +12,11 @@ import { visualizeFsm } from './commands/generateFsm';
 import { generateAxiCommand } from './commands/generateAxi';
 import { generateMemoryCommand } from './commands/generateMemory';
 import { generateRegistersCommand } from './commands/generateRegisters';
-import { debugProjectClassification } from './commands/debugProjectClassification';
+import {
+    buildClassificationRenderOptionsByPreset,
+    debugProjectClassification,
+    resolveClassificationDebugPresetArg
+} from './commands/debugProjectClassification';
 import { debugActiveTargetContext } from './commands/debugActiveTargetContext';
 import { debugRecentRunsByTarget } from './commands/debugRecentRuns';
 import { openLastWaveformByTarget } from './commands/openLastWaveformByTarget';
@@ -1125,7 +1129,16 @@ export function activate(context: vscode.ExtensionContext) {
         await debugProjectClassification(classificationOutputChannel);
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.debugProjectClassificationView', async () => {
+    context.subscriptions.push(vscode.commands.registerCommand('hdl-helper.debugProjectClassificationView', async (arg?: unknown) => {
+        const presetArg = resolveClassificationDebugPresetArg(arg);
+        if (presetArg) {
+            await debugProjectClassification(
+                classificationOutputChannel,
+                buildClassificationRenderOptionsByPreset(presetArg)
+            );
+            return;
+        }
+
         const picked = await vscode.window.showQuickPick([
             {
                 label: 'All Sections',
@@ -1150,7 +1163,10 @@ export function activate(context: vscode.ExtensionContext) {
             return;
         }
 
-        await debugProjectClassification(classificationOutputChannel, { preset: picked.preset });
+        await debugProjectClassification(
+            classificationOutputChannel,
+            buildClassificationRenderOptionsByPreset(picked.preset)
+        );
     }));
 
     const targetContextOutputChannel = vscode.window.createOutputChannel('HDL Helper - Target Context');

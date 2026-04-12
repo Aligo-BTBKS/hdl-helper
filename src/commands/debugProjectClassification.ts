@@ -54,6 +54,35 @@ export function buildClassificationRenderOptionsByPreset(
     return { preset };
 }
 
+export function resolveClassificationDebugPresetArg(
+    arg: unknown
+): ClassificationDebugSectionFilterPreset | undefined {
+    const pickPreset = (value: unknown): ClassificationDebugSectionFilterPreset | undefined => {
+        if (typeof value !== 'string') {
+            return undefined;
+        }
+
+        const normalized = value.trim().toLowerCase();
+        if (normalized === 'all' || normalized === 'overview' || normalized === 'details') {
+            return normalized;
+        }
+
+        return undefined;
+    };
+
+    const direct = pickPreset(arg);
+    if (direct) {
+        return direct;
+    }
+
+    if (!arg || typeof arg !== 'object') {
+        return undefined;
+    }
+
+    const candidate = arg as { preset?: unknown; view?: unknown; mode?: unknown };
+    return pickPreset(candidate.preset) || pickPreset(candidate.view) || pickPreset(candidate.mode);
+}
+
 export function formatClassificationDebugReport(
     input: ClassificationDebugReportInput,
     options: ClassificationDebugSectionRenderOptions = {}

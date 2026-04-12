@@ -103,6 +103,7 @@ This guide lists workbench-related settings that can be configured directly in V
     - `All Sections`
     - `Overview`
     - `Details Only`
+  - The same command can be invoked programmatically with a preset argument (for automation/buttons), e.g. `overview` / `details` / `all`.
 
 - `hdl-helper.targetDrivenRuns.enabled`
   - Enable target-oriented run management.

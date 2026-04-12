@@ -1053,3 +1053,25 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（70 passing）。
+
+## 2026-04-12 - Iteration 5 Day 27: Preset Argument Invocation
+
+- 目标: 按建议继续推进，让 `Debug Project Classification (View...)` 支持参数调用，方便按钮与自动化复用。
+- 变更文件:
+  - src/commands/debugProjectClassification.ts
+  - src/extension.ts
+  - src/test/extension.test.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - 新增 `resolveClassificationDebugPresetArg(...)`，支持字符串与对象参数解析（`preset/view/mode`）。
+  - `hdl-helper.debugProjectClassificationView` 命令更新：
+    - 入参可解析时直接按 preset 执行
+    - 无有效入参时保持 QuickPick 回退
+  - 复用 `buildClassificationRenderOptionsByPreset(...)`，保证 preset 到 render options 的单一映射。
+  - 新增最小回归测试：
+    - `Classification preset arg resolver supports string and object payloads`
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（71 passing）。
