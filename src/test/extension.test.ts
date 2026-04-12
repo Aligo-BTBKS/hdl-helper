@@ -1281,6 +1281,78 @@ suite('Extension Test Suite', () => {
 		assert.ok(issues.some(issue => issue.message.includes("Target 'sim_default' has no resolved top.")));
 	});
 
+	test('Config diagnostics builder reports empty resolved files, missing filelist, missing files and unknown profile', () => {
+		const issues = buildConfigIssues({
+			configEnabled: true,
+			status: ProjectConfigStatus.Valid,
+			config: {
+				version: '1.0',
+				name: 'repo',
+				root: 'C:/repo',
+				sourceSets: {
+					design: {
+						name: 'design',
+						role: Role.Design,
+						includes: ['rtl/**/*.sv']
+					}
+				},
+				tops: {
+					design: 'dut_top',
+					simulation: 'tb_top'
+				},
+				targets: {
+					sim_empty: {
+						id: 'sim_empty',
+						kind: TargetKind.Simulation,
+						top: 'tb_top',
+						sourceSets: ['design'],
+						filelist: 'missing/sim.f',
+						toolProfile: 'profile-unknown'
+					},
+					sim_missing: {
+						id: 'sim_missing',
+						kind: TargetKind.Simulation,
+						top: 'tb_top',
+						sourceSets: ['design']
+					}
+				},
+				activeTarget: 'sim_empty'
+			},
+			targetContexts: {
+				sim_empty: {
+					targetId: 'sim_empty',
+					kind: TargetKind.Simulation,
+					top: 'tb_top',
+					resolvedFiles: [],
+					includeDirs: [],
+					defines: {},
+					constraints: [],
+					scripts: [],
+					sourceSets: ['design']
+				},
+				sim_missing: {
+					targetId: 'sim_missing',
+					kind: TargetKind.Simulation,
+					top: 'tb_top',
+					resolvedFiles: ['C:/repo/rtl/missing_file.sv'],
+					includeDirs: [],
+					defines: {},
+					constraints: [],
+					scripts: [],
+					sourceSets: ['design']
+				}
+			},
+			knownToolProfiles: ['profile-fast'],
+			resolvePath: filePath => `C:/repo/${filePath}`,
+			fileExists: filePath => !filePath.includes('missing')
+		});
+
+		assert.ok(issues.some(issue => issue.message.includes("Target 'sim_empty' has empty resolved files.")));
+		assert.ok(issues.some(issue => issue.message.includes("Target 'sim_empty' references missing filelist")));
+		assert.ok(issues.some(issue => issue.message.includes("Target 'sim_empty' references unknown tool profile")));
+		assert.ok(issues.some(issue => issue.message.includes("Target 'sim_missing' has 1 missing resolved file(s)")));
+	});
+
 	test('Open project config helper opens existing config file', async () => {
 		const opened: string[] = [];
 		let createCalls = 0;

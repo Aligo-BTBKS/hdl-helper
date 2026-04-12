@@ -810,12 +810,33 @@ export class HdlTreeProvider implements vscode.TreeDataProvider<HdlTreeItem> {
             const config = await configService.loadConfig();
             const status = configService.getStatus();
             const issues = configService.getIssues();
+            const targetContextService = new TargetContextService(folder.uri.fsPath, {
+                projectConfig: config,
+                designTop: this.designTopModuleName || undefined,
+                simulationTop: this.simulationTopModuleName || undefined
+            });
+
+            const targetContexts: Record<string, ReturnType<TargetContextService['resolveTargetContext']>> = {};
+            for (const targetId of Object.keys(config?.targets || {})) {
+                targetContexts[targetId] = targetContextService.resolveTargetContext(targetId);
+            }
+
+            const knownToolProfiles = vscode.workspace
+                .getConfiguration('hdl-helper', folder.uri)
+                .get<string[]>('projectConfig.knownToolProfiles', []);
+
             const entries = buildConfigIssues({
                 configEnabled,
                 status,
                 config,
                 errors: issues.errors,
-                warnings: issues.warnings
+                warnings: issues.warnings,
+                targetContexts,
+                knownToolProfiles,
+                fileExists: fs.existsSync,
+                resolvePath: candidate => path.isAbsolute(candidate)
+                    ? candidate
+                    : path.join(folder.uri.fsPath, candidate)
             });
 
             for (const entry of entries) {
@@ -830,12 +851,6 @@ export class HdlTreeProvider implements vscode.TreeDataProvider<HdlTreeItem> {
                 };
                 items.push(new HdlInfoItem(`[${folder.name}] ${entry.message}`, `config:${status}`, icon, command));
             }
-
-            const targetContextService = new TargetContextService(folder.uri.fsPath, {
-                projectConfig: config,
-                designTop: this.designTopModuleName || undefined,
-                simulationTop: this.simulationTopModuleName || undefined
-            });
             const activeContext = targetContextService.getActiveTargetContext();
 
             if (config?.activeTarget && !config.targets[config.activeTarget]) {

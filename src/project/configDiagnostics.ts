@@ -1,6 +1,7 @@
 import {
     NormalizedProjectConfig,
     ProjectConfigStatus,
+    TargetContext,
     TargetKind
 } from './types';
 
@@ -17,6 +18,10 @@ export interface BuildConfigIssuesInput {
     config?: NormalizedProjectConfig;
     errors?: string[];
     warnings?: string[];
+    targetContexts?: Record<string, TargetContext | undefined>;
+    knownToolProfiles?: string[];
+    fileExists?: (filePath: string) => boolean;
+    resolvePath?: (filePath: string) => string;
 }
 
 export function buildConfigIssues(input: BuildConfigIssuesInput): ConfigIssueEntry[] {
@@ -45,15 +50,47 @@ export function buildConfigIssues(input: BuildConfigIssuesInput): ConfigIssueEnt
 
     const config = input.config;
     if (config) {
+        const knownToolProfiles = new Set(input.knownToolProfiles || []);
+
         for (const [targetId, target] of Object.entries(config.targets)) {
             const hasResolvedTop = target.top || (
                 target.kind === TargetKind.Simulation
                     ? config.tops.simulation
                     : config.tops.design
             );
+            const targetContext = input.targetContexts?.[targetId];
 
             if (!hasResolvedTop) {
                 pushUnique('warning', `Target '${targetId}' has no resolved top.`);
+            }
+
+            if (targetContext && targetContext.resolvedFiles.length === 0) {
+                pushUnique('warning', `Target '${targetId}' has empty resolved files.`);
+            }
+
+            if (targetContext && input.fileExists) {
+                const missingResolvedFiles = targetContext.resolvedFiles.filter(filePath => !input.fileExists!(filePath));
+                if (missingResolvedFiles.length > 0) {
+                    pushUnique(
+                        'warning',
+                        `Target '${targetId}' has ${missingResolvedFiles.length} missing resolved file(s), e.g. '${missingResolvedFiles[0]}'.`
+                    );
+                }
+            }
+
+            if (target.filelist && input.fileExists) {
+                const resolvedFilelist = input.resolvePath ? input.resolvePath(target.filelist) : target.filelist;
+                if (!input.fileExists(resolvedFilelist)) {
+                    pushUnique('warning', `Target '${targetId}' references missing filelist: ${target.filelist}`);
+                }
+            }
+
+            if (
+                target.toolProfile
+                && knownToolProfiles.size > 0
+                && !knownToolProfiles.has(target.toolProfile)
+            ) {
+                pushUnique('warning', `Target '${targetId}' references unknown tool profile: ${target.toolProfile}`);
             }
         }
     }

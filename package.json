@@ -583,6 +583,14 @@
           "default": false,
           "description": "启用 project.json 配置驱动的工程管理 (实验性功能)。启用后，将使用 .hdl-helper/project.json 定义的 source sets 和 targets。"
         },
+        "hdl-helper.projectConfig.knownToolProfiles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Project Config Diagnostics 用于校验 target.toolProfile 的已知 profile 列表。留空表示不做未知 profile 检查。"
+        },
         "hdl-helper.targetDrivenRuns.enabled": {
           "type": "boolean",
           "default": false,

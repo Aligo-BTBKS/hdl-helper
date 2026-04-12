@@ -133,6 +133,11 @@ This guide lists workbench-related settings that can be configured directly in V
 - `hdl-helper.projectConfig.enabled`
   - Enable project.json-driven classification and context.
   - When enabled, explorer shows `Diagnostics` section with project config issues (missing/invalid config, unresolved target tops, validation warnings, and active-target fallback issues).
+  - Diagnostics now also checks per-target issues:
+    - empty resolved files
+    - missing resolved files
+    - broken filelist path
+    - unknown tool profile (when known profiles are configured)
   - Active target context now resolves non-empty `resolvedFiles` from configured source sets using include/exclude patterns.
   - Source set file resolution is now centralized via `SourceSetService`, and `TargetContextService` consumes that service as the single source-set resolution path.
   - Shared files referenced by multiple source sets now keep deterministic `primary role + secondary roles` semantics in classification results, and Sources tooltip shows secondary roles plus matched source set names.
@@ -205,6 +210,11 @@ This guide lists workbench-related settings that can be configured directly in V
   - In `Tasks and Runs`, click a run record item to open artifacts for that target record.
   - In `Tasks and Runs`, right-click a run record and run `HDL: Rerun Active Target` to rerun that specific target record directly.
   - In `Last Waveform` / `Last Logs`, click target items to directly reopen artifact files from stored run records.
+
+- `hdl-helper.projectConfig.knownToolProfiles`
+  - Optional allow-list for `target.toolProfile` diagnostics.
+  - Empty array means unknown-profile check is disabled.
+  - Example: `["iverilog", "xsim", "modelsim"]`
 
 ## Sources View UI Behavior Settings
 

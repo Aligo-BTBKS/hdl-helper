@@ -1454,3 +1454,29 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（81 passing）。
+
+## 2026-04-12 - Iteration 6 Day 42: Project Config Issues Coverage Expansion
+
+- 目标: 进入 Iteration 6，扩展 Diagnostics 中 `Project Config Issues` 的可见范围，使问题更可操作。
+- 变更文件:
+  - src/project/configDiagnostics.ts
+  - src/project/hdlTreeProvider.ts
+  - src/test/extension.test.ts
+  - package.json
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - `buildConfigIssues` 新增目标级诊断能力：
+    - `empty resolved files`
+    - `missing resolved files`
+    - `broken filelist`
+    - `unknown tool profile`（可选）
+  - `hdlTreeProvider` 为 diagnostics 注入 target context、文件存在性检查与路径解析。
+  - 新增设置项：
+    - `hdl-helper.projectConfig.knownToolProfiles`
+  - 回归补充：
+    - 扩展 config diagnostics builder 测试，覆盖上述新增诊断。
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（82 passing）。
