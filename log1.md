@@ -1776,3 +1776,37 @@
   - npm run -s lint: 通过。
   - npm test -s: 通过（97 passing）。
   - npm run -s check:fixture-matrix: 通过。
+
+## 2026-04-12 - Iteration 6 Day 52: First-pass Fixture Sanity Execution
+
+- 目标: 执行首轮 fixture sanity 并将 release checklist 中可自动验证项完成打勾，形成可追踪的发布前证据链。
+- 变更文件:
+  - scripts/run-fixture-sanity-report.cjs
+  - src/test/extension.test.ts
+  - package.json
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - resources/regression/README.md
+  - resources/regression/FIXTURE_SANITY_REPORT_2026-04-12.md
+  - resources/regression/SEMANTIC_WORKBENCH_RELEASE_CHECKLIST.md
+  - log1.md
+- 关键变更:
+  - 新增脚本 `run-fixture-sanity-report.cjs`：
+    - 对 6 个 fixture 执行 first-pass sanity
+    - 对非 heuristic fixture 运行 project-config-integrity
+    - 对 heuristic fixture 强制 no-project-config 契约检查
+    - 生成报告 `FIXTURE_SANITY_REPORT_2026-04-12.md`
+  - 新增 npm script：
+    - `check:fixture-sanity`
+  - 回归补充：
+    - 新增脚本级测试，验证 sanity 脚本通过并产出报告
+  - release checklist 同步：
+    - Semantic gates（compile/lint/test/integrity）勾选完成
+    - fixture project 列表勾选完成，并附 sanity report 证据
+    - fallback mode 中可自动验证条目勾选完成（heuristic mode / missing top / missing filelist）
+- 验证:
+  - npm run -s compile: 通过。
+  - npm run -s lint: 通过。
+  - npm test -s: 通过（98 passing）。
+  - npm run -s check:project-config-integrity: 通过（当前根工作区无 `.hdl-helper/project.json`，按设计跳过）。
+  - npm run -s check:fixture-matrix: 通过。
+  - npm run -s check:fixture-sanity: 通过。

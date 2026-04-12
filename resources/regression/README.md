@@ -15,3 +15,4 @@ Seeded fixture projects:
 
 Automated checks:
 - `npm run check:fixture-matrix` validates fixture directories, README checklist tokens, and required baseline artifacts.
+- `npm run check:fixture-sanity` runs first-pass sanity over all seeded fixtures and writes `FIXTURE_SANITY_REPORT_2026-04-12.md`.

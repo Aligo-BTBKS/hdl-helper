@@ -1329,6 +1329,7 @@
     "test": "vscode-test",
     "check:project-config-integrity": "node scripts/check-project-config-integrity.cjs",
     "check:fixture-matrix": "node scripts/check-regression-fixture-matrix.cjs",
+    "check:fixture-sanity": "node scripts/run-fixture-sanity-report.cjs",
     "ci:gate": "npm run compile && npm run lint && npm run check:project-config-integrity && npm run check:fixture-matrix",
     "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node",
     "esbuild": "npm run esbuild-base -- --sourcemap",

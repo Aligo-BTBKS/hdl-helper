@@ -1565,6 +1565,64 @@ suite('Extension Test Suite', () => {
 		fs.rmSync(tempRoot, { recursive: true, force: true });
 	});
 
+	test('Fixture sanity report script validates seeded fixture set and writes report', () => {
+		const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hdl-helper-fixture-sanity-'));
+		const fixtureRoot = path.join(tempRoot, 'resources', 'regression', 'fixtures');
+		const scriptPath = path.resolve(__dirname, '..', '..', 'scripts', 'run-fixture-sanity-report.cjs');
+
+		const fixtureNames = [
+			'pure_rtl_project',
+			'rtl_tb_sva_project',
+			'multi_top_project',
+			'heuristic_only_project',
+			'shared_file_project',
+			'filelist_narrow_project'
+		];
+
+		for (const fixtureName of fixtureNames) {
+			const fixtureDir = path.join(fixtureRoot, fixtureName);
+			fs.mkdirSync(fixtureDir, { recursive: true });
+			if (fixtureName === 'heuristic_only_project') {
+				continue;
+			}
+
+			const rtlDir = path.join(fixtureDir, 'rtl');
+			const configDir = path.join(fixtureDir, '.hdl-helper');
+			fs.mkdirSync(rtlDir, { recursive: true });
+			fs.mkdirSync(configDir, { recursive: true });
+			fs.writeFileSync(path.join(rtlDir, 'dut.sv'), 'module dut; endmodule\n', 'utf8');
+			fs.writeFileSync(path.join(configDir, 'project.json'), JSON.stringify({
+				version: '1.0',
+				name: fixtureName,
+				sourceSets: {
+					design: {
+						role: 'design',
+						includes: ['rtl/**/*.sv']
+					}
+				},
+				targets: {
+					sim_default: {
+						kind: 'simulation',
+						sourceSets: ['design']
+					}
+				}
+			}, null, 2), 'utf8');
+		}
+
+		const output = cp.execFileSync(process.execPath, [scriptPath], {
+			cwd: tempRoot,
+			encoding: 'utf8'
+		});
+
+		const reportPath = path.join(tempRoot, 'resources', 'regression', 'FIXTURE_SANITY_REPORT_2026-04-12.md');
+		assert.ok(output.includes('Fixture sanity passed.'));
+		assert.ok(fs.existsSync(reportPath));
+
+		const reportContent = fs.readFileSync(reportPath, 'utf8');
+		assert.ok(reportContent.includes('Overall: passed'));
+		fs.rmSync(tempRoot, { recursive: true, force: true });
+	});
+
 	test('Toolchain profile collector returns sorted deduplicated profile list', () => {
 		const profiles = collectToolchainProfileNames({
 			version: '1.0',
