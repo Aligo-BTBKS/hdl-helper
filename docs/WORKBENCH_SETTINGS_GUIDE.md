@@ -220,6 +220,15 @@ This guide lists workbench-related settings that can be configured directly in V
   - Empty array means unknown-profile check is disabled.
   - Example: `["iverilog", "xsim", "modelsim"]`
 
+## CI Governance Gate
+
+- Run `npm run check:project-config-integrity` to validate:
+  - project.json required schema fields
+  - source set reference integrity for targets
+  - missing filelist and explicit include path detection
+- Run `npm run ci:gate` for local pre-push quality gate (`compile + lint + project-config-integrity`).
+- GitHub Actions workflow `.github/workflows/ci.yml` runs compile/lint/test plus project-config integrity checks on `main` push and PR.
+
 ## Sources View UI Behavior Settings
 
 - `hdl-helper.workbench.sources.showLegacyHierarchy`

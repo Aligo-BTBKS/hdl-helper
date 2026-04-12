@@ -1513,3 +1513,33 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（84 passing）。
+
+## 2026-04-12 - Iteration 6 Day 44: CI Governance and Integrity Gate
+
+- 目标: 进入 Iteration 6 governance 阶段，将 project-config 语义完整性检查纳入自动化 CI 门禁。
+- 变更文件:
+  - scripts/check-project-config-integrity.cjs
+  - .github/workflows/ci.yml
+  - package.json
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - 新增脚本：
+    - `check-project-config-integrity.cjs`
+  - 检查项覆盖：
+    - required schema fields
+    - sourceSet reference integrity
+    - missing filelist
+    - missing explicit include path
+    - activeTarget validity
+  - 新增 npm 脚本：
+    - `check:project-config-integrity`
+    - `ci:gate`
+  - 新增 GitHub Actions：
+    - `.github/workflows/ci.yml`
+    - 对 main push/PR 执行 compile/lint/test + project-config integrity gate
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（84 passing）。
+  - npm run check:project-config-integrity: 通过（当前工作区无 `.hdl-helper/project.json`，按设计跳过）。

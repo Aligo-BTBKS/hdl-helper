@@ -1257,6 +1257,8 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "vscode-test",
+    "check:project-config-integrity": "node scripts/check-project-config-integrity.cjs",
+    "ci:gate": "npm run compile && npm run lint && npm run check:project-config-integrity",
     "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node",
     "esbuild": "npm run esbuild-base -- --sourcemap",
     "esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
