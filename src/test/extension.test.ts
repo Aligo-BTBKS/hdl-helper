@@ -26,7 +26,10 @@ import { buildTargetContextDebugSnapshot } from '../commands/debugActiveTargetCo
 import {
 	buildClassificationDebugSections,
 	buildClassificationObservabilityStats,
+	filterClassificationDebugSections,
 	formatClassificationDebugReport,
+	getClassificationDebugSectionPriority,
+	getClassificationDebugSectionTypesByPreset,
 	renderClassificationDebugSections
 } from '../commands/debugProjectClassification';
 import { getProjectConfigPath, openProjectConfig } from '../commands/openProjectConfig';
@@ -369,6 +372,38 @@ suite('Extension Test Suite', () => {
 		assert.ok(rendered.includes('  line-a'));
 		assert.ok(rendered.includes('  line-b'));
 		assert.strictEqual(rendered[rendered.length - 1], '-'.repeat(80));
+	});
+
+	test('Classification debug section priority keeps summary before details', () => {
+		assert.ok(
+			getClassificationDebugSectionPriority('summary') < getClassificationDebugSectionPriority('details')
+		);
+	});
+
+	test('Classification debug section preset filter returns expected types', () => {
+		const overviewTypes = getClassificationDebugSectionTypesByPreset('overview');
+		assert.ok(overviewTypes.has('summary'));
+		assert.ok(!overviewTypes.has('details'));
+
+		const detailsTypes = getClassificationDebugSectionTypesByPreset('details');
+		assert.deepStrictEqual(Array.from(detailsTypes), ['details']);
+	});
+
+	test('Classification debug section filtering applies preset and stable ordering', () => {
+		const sections = [
+			{ id: 'details', type: 'details' as const, title: 'Details', lines: ['d'] },
+			{ id: 'summary', type: 'summary' as const, title: 'Summary', lines: ['s'] },
+			{ id: 'workspace', type: 'workspace' as const, title: '', lines: ['w'] }
+		];
+
+		const overview = filterClassificationDebugSections(sections, { preset: 'overview' });
+		assert.deepStrictEqual(overview.map(section => section.type), ['workspace', 'summary']);
+
+		const detailsOnly = filterClassificationDebugSections(sections, {
+			preset: 'all',
+			includeTypes: ['details']
+		});
+		assert.deepStrictEqual(detailsOnly.map(section => section.type), ['details']);
 	});
 
 	test('Dual hierarchy keeps Design/Simulation tops independent', async () => {

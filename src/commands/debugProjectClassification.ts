@@ -12,10 +12,22 @@ import { ClassificationService } from '../project/classificationService';
 import { ProjectConfigService } from '../project/projectConfigService';
 import {
     ClassificationDebugSection,
+    ClassificationDebugSectionFilterPreset,
     ClassificationDebugReportInput,
+    ClassificationDebugSectionRenderOptions,
+    ClassificationDebugSectionType,
     ClassificationObservabilityStats,
     FileClassificationResult
 } from '../project/types';
+
+const sectionPriority: Record<ClassificationDebugSectionType, number> = {
+    workspace: 10,
+    config: 20,
+    discovery: 30,
+    summary: 40,
+    'source-set-coverage': 50,
+    details: 60
+};
 
 export function buildClassificationObservabilityStats(
     results: FileClassificationResult[]
@@ -113,11 +125,13 @@ export function buildClassificationDebugSections(
 }
 
 export function renderClassificationDebugSections(
-    sections: ClassificationDebugSection[]
+    sections: ClassificationDebugSection[],
+    options: ClassificationDebugSectionRenderOptions = {}
 ): string[] {
     const lines: string[] = [];
+    const filteredSections = filterClassificationDebugSections(sections, options);
 
-    for (const section of sections) {
+    for (const section of filteredSections) {
         if (section.title) {
             lines.push(section.title);
         }
@@ -127,6 +141,58 @@ export function renderClassificationDebugSections(
 
     lines.push('-'.repeat(80));
     return lines;
+}
+
+export function getClassificationDebugSectionPriority(type: ClassificationDebugSectionType): number {
+    return sectionPriority[type] ?? Number.MAX_SAFE_INTEGER;
+}
+
+export function getClassificationDebugSectionTypesByPreset(
+    preset: ClassificationDebugSectionFilterPreset = 'all'
+): Set<ClassificationDebugSectionType> {
+    switch (preset) {
+        case 'overview':
+            return new Set<ClassificationDebugSectionType>([
+                'workspace',
+                'config',
+                'discovery',
+                'summary',
+                'source-set-coverage'
+            ]);
+        case 'details':
+            return new Set<ClassificationDebugSectionType>(['details']);
+        case 'all':
+        default:
+            return new Set<ClassificationDebugSectionType>([
+                'workspace',
+                'config',
+                'discovery',
+                'summary',
+                'source-set-coverage',
+                'details'
+            ]);
+    }
+}
+
+export function filterClassificationDebugSections(
+    sections: ClassificationDebugSection[],
+    options: ClassificationDebugSectionRenderOptions = {}
+): ClassificationDebugSection[] {
+    const presetTypes = getClassificationDebugSectionTypesByPreset(options.preset || 'all');
+    const includeTypes = options.includeTypes ? new Set(options.includeTypes) : undefined;
+    const excludeTypes = options.excludeTypes ? new Set(options.excludeTypes) : undefined;
+
+    return [...sections]
+        .filter(section => presetTypes.has(section.type))
+        .filter(section => !includeTypes || includeTypes.has(section.type))
+        .filter(section => !excludeTypes || !excludeTypes.has(section.type))
+        .sort((a, b) => {
+            const priorityDiff = getClassificationDebugSectionPriority(a.type) - getClassificationDebugSectionPriority(b.type);
+            if (priorityDiff !== 0) {
+                return priorityDiff;
+            }
+            return a.id.localeCompare(b.id);
+        });
 }
 
 /**

@@ -194,6 +194,14 @@ export type ClassificationDebugSectionType =
     | 'source-set-coverage'
     | 'details';
 
+export type ClassificationDebugSectionFilterPreset = 'all' | 'overview' | 'details';
+
+export interface ClassificationDebugSectionRenderOptions {
+    preset?: ClassificationDebugSectionFilterPreset;
+    includeTypes?: ClassificationDebugSectionType[];
+    excludeTypes?: ClassificationDebugSectionType[];
+}
+
 /**
  * Structured section model for classification debug rendering.
  */

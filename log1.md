@@ -1000,3 +1000,30 @@
   - npm run compile: 通过。
   - npm run lint: 通过。
   - npm test: 通过（65 passing）。
+
+## 2026-04-12 - Iteration 5 Day 25: Section Priority and Filter Strategy
+
+- 目标: 继续推进 Iteration 5，为 classification section model 增加统一优先级和过滤策略，支持 Inspector 侧 overview/details 视图切片。
+- 变更文件:
+  - src/project/types.ts
+  - src/commands/debugProjectClassification.ts
+  - src/test/extension.test.ts
+  - docs/WORKBENCH_SETTINGS_GUIDE.md
+  - log1.md
+- 关键变更:
+  - `project/types.ts` 新增渲染过滤类型：
+    - `ClassificationDebugSectionFilterPreset`
+    - `ClassificationDebugSectionRenderOptions`
+  - `debugProjectClassification` 新增策略函数：
+    - `getClassificationDebugSectionPriority(...)`
+    - `getClassificationDebugSectionTypesByPreset(...)`
+    - `filterClassificationDebugSections(...)`
+  - `renderClassificationDebugSections(...)` 支持可选过滤参数，默认按优先级稳定排序输出。
+  - 新增最小回归测试：
+    - section 优先级关系
+    - preset 类型选择
+    - preset + include 策略下的稳定过滤排序
+- 验证:
+  - npm run compile: 通过。
+  - npm run lint: 通过。
+  - npm test: 通过（68 passing）。
